@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from .config import BASELINE, TIERS, TRIAGE
+from .config import BASELINE, MAX_MODELS, TIERS, TRIAGE
 from .llm import LLM, AnthropicLLM
 from .pipeline import Router
 from .triage import QA
@@ -30,6 +30,8 @@ class AskIn(BaseModel):
     request: str = Field(min_length=1, max_length=8000)
     answers: list[AnswerIn] | None = None
     compare: bool = False
+    # Advisor mode only: the caller's own models, smallest → largest (any provider).
+    available_models: list[str] | None = Field(default=None, max_length=MAX_MODELS)
 
 
 def create_app(llm: LLM | None = None) -> FastAPI:
@@ -61,7 +63,9 @@ def create_app(llm: LLM | None = None) -> FastAPI:
     def route(body: AskIn) -> dict:
         """Advisor mode: returns which model and effort to use, without answering."""
         answers = [QA(a.question, a.answer) for a in body.answers] if body.answers else None
-        return run_safely(lambda: router().route(body.request, answers))
+        return run_safely(
+            lambda: router().route(body.request, answers, available_models=body.available_models)
+        )
 
     def run_safely(action: Callable[[], dict]) -> dict:
         """Runs a router call and turns API errors into clear messages."""

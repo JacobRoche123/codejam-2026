@@ -32,6 +32,24 @@ def test_route_endpoint_returns_advice_only():
     assert "answer" not in advice
 
 
+def test_route_endpoint_uses_the_callers_models():
+    client = TestClient(create_app(FakeLLM([verdict(complexity="medium")])))
+    advice = client.post(
+        "/api/route",
+        json={"request": "Write a sort function", "available_models": ["a", "b", "c"]},
+    ).json()
+    assert advice["recommendation"]["model"] == "b"
+    assert advice["recommendation"]["source"] == "your list"
+
+
+def test_route_endpoint_rejects_too_many_models():
+    client = TestClient(create_app(FakeLLM([])))
+    response = client.post(
+        "/api/route", json={"request": "x", "available_models": [f"m{i}" for i in range(21)]}
+    )
+    assert response.status_code == 422
+
+
 def test_empty_request_is_a_validation_error():
     client = TestClient(create_app(FakeLLM([])))
     assert client.post("/api/ask", json={"request": ""}).status_code == 422

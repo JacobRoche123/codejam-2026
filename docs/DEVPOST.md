@@ -40,7 +40,7 @@ ThinkLess is a router that sits in front of an AI assistant. For every request i
 4. **Routes** to the smallest model that should be enough: Haiku for simple facts, Sonnet for code and explanations, Opus for proofs and system design.
 5. **Measures** every step with real token counts and cost, and shows it live next to "what if everything went to Opus".
 
-It works three ways: a demo web app that shows every decision, an advisor API that returns only the recommended model, and an **MCP tool** that plugs into AI agents like Claude Code, so an agent can ask ThinkLess which model to use before it starts working.
+It works three ways: a demo web app that shows every decision, an advisor API that returns only the recommended model, and an **MCP tool** that plugs into AI agents like Claude Code, so an agent can ask ThinkLess which model to use before it starts working. It is not tied to Claude: an agent can send its own models, ordered from smallest to largest, and ThinkLess picks one of them, so the advice works for any model family. Anyone can install it in one command.
 
 **Measured on 20 tasks, graded blind:** 60 % less billed compute and 27 % fewer tokens than sending everything to Opus, while keeping 91 % of its quality.
 
@@ -52,7 +52,7 @@ It works three ways: a demo web app that shows every decision, an advisor API th
 - **A similarity cache** built in two layers: free text similarity with Python's `difflib`, then a Haiku check only when the texts look close.
 - **The MCP Python SDK** to expose ThinkLess as a tool that agents can call.
 - **A benchmark** of 20 tasks: each runs through ThinkLess and through Opus alone, and Claude Sonnet grades both answers blind, twice with the order swapped. A second benchmark compares thinking-effort levels.
-- **26 offline tests** with a fake model, so the logic is checked for free in under a second.
+- **38 offline tests** with a fake model, so the logic is checked for free in under a second.
 
 I built it with Claude Code as a pair programmer, and used it as a teacher too: I asked it to explain every file, then did small experiments myself (changing prices, breaking a test on purpose, predicting results) until I could explain the whole data flow on my own.
 
@@ -82,7 +82,7 @@ I built it with Claude Code as a pair programmer, and used it as a teacher too: 
 ## What's next for ThinkLess
 
 - **Host it online** (MCP over HTTP, with authentication and rate limits) so agents that need remote tools, like ChatGPT, can use it.
-- **Provider-neutral tiers**: map simple/medium/complex to other providers' small, medium and large models.
+- **A triage that needs no Anthropic key**: other triage backends, or MCP sampling so the agent's own model does the triage. Today the advice works for any provider, but the triage still runs on Claude Haiku.
 - **A held-out benchmark** of fresh tasks, since the triage rules were tuned on the same 20 tasks.
 - **A persistent cache** that survives restarts, and smarter paraphrase matching.
 

@@ -35,6 +35,13 @@ TIERS: dict[str, Tier] = {
     "complex": Tier("complex", "claude-opus-5-5", "high", "Opus 5.5 · effort high"),
 }
 
+# Provider-neutral size for each tier, used when an agent sends its own list of models.
+SIZES: dict[str, str] = {"simple": "small", "medium": "medium", "complex": "large"}
+
+# Limits on a model list sent by an agent.
+MAX_MODELS = 20
+MAX_MODEL_NAME = 100
+
 TRIAGE = Tier("triage", "claude-haiku-5-5", "low", "Haiku 5.5 · effort low")
 
 # What a naive app does: send everything to the strongest model.

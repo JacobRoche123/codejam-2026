@@ -5,7 +5,17 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from .cache import confirm_same, find_similar
-from .config import BASELINE, SIMILARITY_THRESHOLD, TIERS, TRIAGE, Tier, cost_usd
+from .config import (
+    BASELINE,
+    MAX_MODEL_NAME,
+    MAX_MODELS,
+    SIMILARITY_THRESHOLD,
+    SIZES,
+    TIERS,
+    TRIAGE,
+    Tier,
+    cost_usd,
+)
 from .llm import LLM, LLMResult
 from .triage import QA, triage
 
@@ -113,16 +123,49 @@ def cache_key(request: str, answers: list[QA] | None) -> str:
     return norm
 
 
+def clean_models(models: list[str] | None) -> list[str]:
+    """Trims names, drops blanks and duplicates (keeping order), and caps the list size."""
+    cleaned: list[str] = []
+    for name in models or []:
+        name = name.strip()[:MAX_MODEL_NAME]
+        if name and name not in cleaned:
+            cleaned.append(name)
+    return cleaned[:MAX_MODELS]
+
+
+def pick_from_list(complexity: str, models: list[str]) -> str:
+    """Picks a model from a list ordered smallest → largest.
+
+    simple → first, complex → last, medium → the middle one. With an even count there are
+    two middles: we take the larger one, because a too-small model wastes the whole call.
+    """
+    if complexity == "simple":
+        return models[0]
+    if complexity == "complex":
+        return models[-1]
+    return models[len(models) // 2]
+
+
 class Router:
     def __init__(self, llm: LLM):
         self.llm = llm
         self.cache: dict[str, Outcome] = {}
 
-    def route(self, request: str, answers: list[QA] | None = None) -> dict[str, Any]:
-        """Advisor mode: triage only. Says which model and effort to use, never answers."""
+    def route(
+        self,
+        request: str,
+        answers: list[QA] | None = None,
+        available_models: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Advisor mode: triage only. Says which model and effort to use, never answers.
+
+        With `available_models` (the agent's own models, smallest → largest), the advice
+        names one of them, so it works for any provider. Without it, Claude models are used.
+        """
         request = request.strip()
         if not request:
             raise ValueError("The request is empty.")
+        models = clean_models(available_models)
 
         verdict = triage(self.llm, request, answers)
         detail = (
@@ -140,11 +183,20 @@ class Router:
         }
         if not verdict.needs_answers:
             tier = TIERS[verdict.complexity]
+            size = SIZES[verdict.complexity]
+            if models:
+                model = pick_from_list(verdict.complexity, models)
+                label = f"{model} · {size} model from your list · effort {tier.effort}"
+                source = "your list"
+            else:
+                model, label, source = tier.model, tier.label, "default Claude models"
             result["recommendation"] = {
                 "tier": tier.name,
-                "model": tier.model,
+                "size": size,
+                "model": model,
                 "effort": tier.effort,
-                "label": tier.label,
+                "label": label,
+                "source": source,
             }
             result["brief"] = verdict.brief
         return result

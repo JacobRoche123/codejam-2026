@@ -75,8 +75,8 @@ flowchart LR
 | Mode | What it does | Entry point |
 |---|---|---|
 | **Demo app** | Answers the request and shows every decision, its model, tokens, cost and time, next to "everything on Opus" | `uv run thinkless` → http://127.0.0.1:8000 |
-| **Advisor API** | Returns the recommended model and effort, without answering | `POST /api/route` |
-| **MCP tool** | Plugs into Claude Code, Claude Desktop or any MCP agent as a `choose_model` tool | `uv run thinkless-mcp` |
+| **Advisor API** | Returns the recommended model and effort, without answering; accepts your own list of models | `POST /api/route` |
+| **MCP tool** | Plugs into Claude Code, Claude Desktop or any MCP agent as a `choose_model` tool, for any model family | `uv run thinkless-mcp` |
 
 ## Install ThinkLess as an advisor tool (one command)
 
@@ -263,17 +263,38 @@ flowchart LR
     T -.-> A3["❌ ChatGPT web app<br/>needs a hosted HTTP version<br/>with authentication"]
 ```
 
-Two caveats for non-Claude agents:
+### Works with any model family
 
-- The advice names **Claude** models. In another ecosystem, the three tiers (simple, medium, complex) would need mapping to that provider's small, medium and large models.
-- The triage itself always calls Claude Haiku, so an Anthropic API key is required whatever the agent.
+ThinkLess judges **how hard a task is**, which does not depend on the provider. An agent can send **its own models**, ordered from smallest/cheapest to largest, and the advice then names one of them:
+
+```mermaid
+flowchart LR
+    R["Request"] --> T["Triage<br/>simple · medium · complex"]
+    T --> S["small → first model"]
+    T --> M["medium → middle model<br/>(the larger of two middles)"]
+    T --> L["large → last model"]
+```
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/route \
+  -H "Content-Type: application/json" \
+  -d '{"request": "Prove that √2 is irrational", "available_models": ["small-model", "medium-model", "large-model"]}'
+```
+
+```json
+{"tier": "complex", "size": "large", "model": "large-model", "effort": "high", "source": "your list"}
+```
+
+The MCP tool takes the same optional `available_models` argument, and its description tells agents to pass their models. Without a list, ThinkLess recommends Claude models (Haiku, Sonnet, Opus). The `effort` field (low, medium, high) is a hint: use your provider's closest setting, if it has one.
+
+**Still required:** the triage itself runs on Claude Haiku, so an Anthropic API key is needed whatever the agent. Next steps to remove that: other triage backends, or MCP *sampling* (letting the agent's own model do the triage), which few clients support today.
 
 ## Tests and benchmarks
 
 Run the tests (offline, free, with a fake model):
 
 ```bash
-uv run pytest -q          # 26 tests
+uv run pytest -q          # 38 tests
 ```
 
 Reproduce the benchmarks (real API calls, about $1.60 and $0.80):
@@ -311,7 +332,7 @@ flowchart TD
 | [`src/thinkless/mcp_server.py`](src/thinkless/mcp_server.py) | MCP server exposing `choose_model` |
 | [`web/`](web/) | Demo page: live trace, benchmark tab, how-it-works |
 | [`bench/`](bench/) | Tasks, benchmark scripts and raw results |
-| [`tests/`](tests/) | 26 offline tests |
+| [`tests/`](tests/) | 38 offline tests |
 
 **Stack:** Python 3.12, Anthropic Python SDK, FastAPI, MCP Python SDK, vanilla HTML/CSS/JS. Models: Claude Haiku 5.5, Sonnet 5.5 and Opus 5.5.
 

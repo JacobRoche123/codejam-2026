@@ -24,10 +24,11 @@ from .pipeline import Router
 ROOT = Path(__file__).resolve().parents[2]
 
 INSTRUCTIONS = (
-    "ThinkLess is an advisor that saves compute. Before working on a user request, call "
-    "choose_model with the request text. It returns the smallest Claude model and effort level "
-    "that should be enough. Use that model when you can delegate the work (for example to a "
-    "subagent). If it returns questions, ask the user first instead of guessing."
+    "ThinkLess is an advisor that saves compute, for any AI provider. Before working on a user "
+    "request, call choose_model with the request text and, if you know them, the models you can "
+    "use, ordered from smallest/cheapest to largest. It returns the smallest model and effort "
+    "level that should be enough. Use that model when you can delegate the work (for example to "
+    "a subagent). If it returns questions, ask the user first instead of guessing."
 )
 
 MISSING_KEY = (
@@ -55,18 +56,23 @@ def create_server(llm: LLM | None = None) -> MCPServer:
         annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, open_world_hint=True),
         structured_output=True,
     )
-    def choose_model(request: str) -> dict[str, Any]:
-        """Recommend the cheapest Claude model and effort level that can handle this request.
+    def choose_model(request: str, available_models: list[str] | None = None) -> dict[str, Any]:
+        """Recommend the cheapest model and effort level that can handle this request.
+
+        Works with any provider: pass `available_models`, the models you can use, ordered
+        from smallest/cheapest to largest (for example ["small-model", "medium-model",
+        "large-model"]); the advice then names one of them, with a neutral size (small,
+        medium, large). Without the list, it recommends Claude models (Haiku, Sonnet, Opus).
 
         Advice only: it never answers the request and changes nothing. Call it before
         answering or delegating a task. Returns status "route" with a recommendation
-        (model, effort, reason), or status "needs_answers" with clarifying questions to ask
-        the user first. Costs about 0.02 cents (one Claude Haiku call).
+        (model, size, effort, reason), or status "needs_answers" with clarifying questions
+        to ask the user first. Costs about 0.02 cents (one Claude Haiku call).
         """
         # ToolError is the one exception whose message the MCP library passes to the agent;
         # any other exception is reported as a generic crash.
         try:
-            advice = router().route(request)
+            advice = router().route(request, available_models=available_models)
         except ValueError as exc:  # e.g. an empty request
             raise ToolError(str(exc)) from exc
         except anthropic.AuthenticationError as exc:  # a key was given but is wrong

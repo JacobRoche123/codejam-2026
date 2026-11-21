@@ -175,7 +175,7 @@ async function advise(answers) {
     const res = await fetch("/api/route", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ request: state.request, answers }),
+      body: JSON.stringify({ request: state.request, answers, available_models: readModels() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail?.[0]?.msg || data.detail || `Error ${res.status}`);
@@ -193,6 +193,7 @@ async function advise(answers) {
     $("#advice-badge").className = `badge ${rec.tier}`;
     $("#advice-badge").textContent = TIER_NAMES[rec.tier] || rec.tier;
     $("#advice-model").textContent = rec.model;
+    $("#advice-size").textContent = `${rec.size} · ${rec.source}`;
     $("#advice-effort").textContent = rec.effort;
     $("#advice-reason").textContent = data.reason || "";
     $("#advice-json").textContent = JSON.stringify(data, null, 2);
@@ -232,10 +233,19 @@ $("#questions-card").addEventListener("submit", (e) => {
   $("#advisor").checked ? advise(answers) : ask(answers);
 });
 
-// The comparison only makes sense when an answer is generated.
+/* "small-model, medium-model" → ["small-model", "medium-model"]; empty field → null (Claude defaults). */
+function readModels() {
+  const models = $("#models").value.split(",").map((m) => m.trim()).filter(Boolean);
+  return models.length ? models : null;
+}
+
+// The comparison only makes sense when an answer is generated;
+// the model list only matters in advisor mode.
 $("#advisor").addEventListener("change", () => {
-  $("#compare").disabled = $("#advisor").checked;
-  if ($("#advisor").checked) $("#compare").checked = false;
+  const advisor = $("#advisor").checked;
+  $("#compare").disabled = advisor;
+  if (advisor) $("#compare").checked = false;
+  $("#models-row").hidden = !advisor;
 });
 
 $("#request").addEventListener("keydown", (e) => {

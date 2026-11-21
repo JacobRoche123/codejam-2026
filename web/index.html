@@ -44,6 +44,10 @@
               </div>
               <button type="submit" class="primary" id="send">Send</button>
             </div>
+            <div id="models-row" class="models-row" hidden>
+              <label for="models" class="small">Your models, smallest → largest (optional, any provider, comma-separated)</label>
+              <input type="text" id="models" placeholder="small-model, medium-model, large-model">
+            </div>
           </form>
 
           <form id="questions-card" class="card accent" hidden>
@@ -66,7 +70,7 @@
             <div class="card-title">ThinkLess advice for your agent</div>
             <div class="advice-main">
               <span id="advice-badge" class="badge"></span>
-              <span>Use <code id="advice-model"></code> with effort <strong id="advice-effort"></strong></span>
+              <span>Use <code id="advice-model"></code> (<span id="advice-size"></span>) with effort <strong id="advice-effort"></strong></span>
             </div>
             <p id="advice-reason" class="muted small"></p>
             <details>

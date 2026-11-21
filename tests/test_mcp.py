@@ -28,6 +28,17 @@ def test_missing_key_gives_the_agent_install_instructions():
         asyncio.run(server.call_tool("choose_model", {"request": "hi"}))
 
 
+def test_choose_model_accepts_any_providers_models():
+    server = create_server(FakeLLM([verdict(complexity="simple")]))
+    result = asyncio.run(server.call_tool(
+        "choose_model",
+        {"request": "Translate hello", "available_models": ["small-x", "medium-x", "large-x"]},
+    ))
+    rec = result.structured_content["recommendation"]
+    assert rec["model"] == "small-x"
+    assert rec["size"] == "small"
+
+
 def test_choose_model_returns_a_recommendation():
     server = create_server(FakeLLM([verdict(complexity="simple", reason="question factuelle")]))
     result = asyncio.run(server.call_tool("choose_model", {"request": "Capitale du Japon ?"}))

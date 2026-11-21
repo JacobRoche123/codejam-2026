@@ -3,7 +3,7 @@ from conftest import FakeLLM, verdict
 
 from thinkless.config import cost_usd
 from thinkless.llm import LLMResult
-from thinkless.pipeline import Router
+from thinkless.pipeline import Router, clean_models, pick_from_list
 from thinkless.triage import QA, parse_verdict
 
 
@@ -99,12 +99,47 @@ def test_advisor_mode_recommends_without_answering():
     assert advice["status"] == "route"
     assert advice["recommendation"] == {
         "tier": "medium",
+        "size": "medium",
         "model": "claude-sonnet-5-5",
         "effort": "medium",
         "label": "Sonnet 5.5 · effort medium",
+        "source": "default Claude models",
     }
     assert len(llm.calls) == 1  # only the triage ran: no answer was generated
     assert advice["triage_cost"] > 0
+
+
+@pytest.mark.parametrize(
+    ("complexity", "models", "expected"),
+    [
+        ("simple", ["s", "m", "l"], "s"),
+        ("medium", ["s", "m", "l"], "m"),
+        ("complex", ["s", "m", "l"], "l"),
+        ("medium", ["s", "l"], "l"),            # two middles: prudence picks the larger
+        ("medium", ["a", "b", "c", "d"], "c"),  # same with four models
+        ("complex", ["only"], "only"),          # one model: always that one
+    ],
+)
+def test_pick_from_list(complexity, models, expected):
+    assert pick_from_list(complexity, models) == expected
+
+
+def test_clean_models_trims_dedups_and_caps():
+    assert clean_models(["  a ", "", "b", "a", "   "]) == ["a", "b"]
+    assert len(clean_models([f"m{i}" for i in range(50)])) == 20
+    assert clean_models(None) == []
+
+
+def test_advisor_mode_uses_the_agents_own_models():
+    llm = FakeLLM([verdict(complexity="complex")])
+    advice = Router(llm).route(
+        "Design a system", available_models=["tiny-model", "mid-model", "big-model"]
+    )
+    rec = advice["recommendation"]
+    assert rec["model"] == "big-model"
+    assert rec["size"] == "large"
+    assert rec["source"] == "your list"
+    assert "claude" not in rec["label"].lower()
 
 
 def test_advisor_mode_passes_questions_through():
