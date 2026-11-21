@@ -1,7 +1,5 @@
 # Devpost submission: ThinkLess
 
-Copy each section into the matching Devpost field.
-Lines starting with ✏️ are notes for you: personalize or delete them before submitting.
 
 ---
 
@@ -24,15 +22,13 @@ python · fastapi · anthropic · claude · model-context-protocol · mcp · jav
 ## Links
 
 - GitHub: https://github.com/JacobRoche123/codejam-2026
-- Demo video: ✏️ add the link once recorded (2 minutes max)
-
 ---
 
 ## Inspiration
 
 Most AI apps send every request to their strongest model. "What's the capital of Australia?" gets the same expensive treatment as "design a system for 50,000 users". That wastes money, time and the energy behind every token. I wanted an agent that thinks about how much thinking a request deserves, and that asks a quick question instead of confidently answering the wrong thing.
 
-✏️ Add one personal sentence: a moment where you noticed this waste yourself, or why efficiency matters to you.
+
 
 ## What it does
 
@@ -82,7 +78,6 @@ I built it with Claude Code as a pair programmer, and used it as a teacher too: 
 - How to measure before claiming, and how to separate what is measured from what is estimated.
 - New tools and concepts: APIs and JSON, HTTP servers, tests with a fake model, structured outputs, threads, MCP, and Git branches.
 
-✏️ Add the one thing that surprised you most this weekend, in your own words.
 
 ## What's next for ThinkLess
 
@@ -91,6 +86,3 @@ I built it with Claude Code as a pair programmer, and used it as a teacher too: 
 - **A held-out benchmark** of fresh tasks, since the triage rules were tuned on the same 20 tasks.
 - **A persistent cache** that survives restarts, and smarter paraphrase matching.
 
----
-
-✏️ Before submitting: check CodeJam's rules on AI tools and make sure this AI-assistance statement matches them.
