@@ -82,6 +82,8 @@ flowchart LR
 
 Anyone can add ThinkLess to their AI agent. It shows up as **"ThinkLess advisor"**, a read-only tool: it recommends a model and an effort level, and never answers or changes anything. No need to download the project.
 
+> **New to the Terminal?** Follow the beginner guide: **[docs/INSTALL.md](docs/INSTALL.md)**. It says which app to open, what to type and what you should see at every step.
+
 You need [uv](https://docs.astral.sh/uv/) (`brew install uv`, or see step 1 below) and your own [Anthropic API key](https://console.anthropic.com/): each piece of advice is one Claude Haiku call, about 0.02 cents, billed to your key.
 
 ```mermaid
