@@ -119,6 +119,29 @@
             </table>
           </div>
         </div>
+
+        <div class="card" id="effort-card" hidden>
+          <div class="card-title row">
+            <span>Modes de réflexion : le même modèle, plus ou moins d'effort</span>
+            <span class="muted small" id="effort-note"></span>
+          </div>
+          <p class="muted small">Quand un modèle réfléchit, il écrit un brouillon invisible facturé comme du texte. Moins de jetons, c'est moins de calcul. Mesuré sur des appels réels ; l'énergie en Wh n'est pas publiée, donc non affichée.</p>
+          <div class="table-wrap">
+            <table class="bench-table">
+              <thead>
+                <tr>
+                  <th>Effort</th>
+                  <th class="num">Jetons de sortie (moy.)</th>
+                  <th>Calcul relatif</th>
+                  <th class="num">Coût total</th>
+                  <th class="num">Temps (moy.)</th>
+                  <th class="num">Qualité vs high</th>
+                </tr>
+              </thead>
+              <tbody id="effort-rows"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
 

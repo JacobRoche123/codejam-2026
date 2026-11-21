@@ -1,0 +1,206 @@
+{
+  "model": "claude-sonnet-5-5",
+  "tasks": 6,
+  "summary": [
+    {
+      "effort": "low",
+      "avg_output_tokens": 963,
+      "total_cost": 0.058721999999999996,
+      "avg_seconds": 7.0,
+      "avg_score": 7.5,
+      "avg_reference_score": 8.42
+    },
+    {
+      "effort": "medium",
+      "avg_output_tokens": 967,
+      "total_cost": 0.058972,
+      "avg_seconds": 7.0,
+      "avg_score": 8.08,
+      "avg_reference_score": 8.58
+    },
+    {
+      "effort": "high",
+      "avg_output_tokens": 1110,
+      "total_cost": 0.067532,
+      "avg_seconds": 7.8,
+      "avg_score": null,
+      "avg_reference_score": null
+    }
+  ],
+  "rows": [
+    {
+      "id": "regex",
+      "effort": "low",
+      "output_tokens": 476,
+      "cost": 0.004892,
+      "ms": 4126,
+      "score": 7.0,
+      "reference_score": 8.0,
+      "judge_cost": 0.012476000000000001
+    },
+    {
+      "id": "regex",
+      "effort": "medium",
+      "output_tokens": 511,
+      "cost": 0.005242,
+      "ms": 3932,
+      "score": 7.0,
+      "reference_score": 8.0,
+      "judge_cost": 0.011585999999999999
+    },
+    {
+      "id": "regex",
+      "effort": "high",
+      "output_tokens": 751,
+      "cost": 0.007642,
+      "ms": 5153,
+      "score": null,
+      "reference_score": null
+    },
+    {
+      "id": "resume",
+      "effort": "low",
+      "output_tokens": 620,
+      "cost": 0.006328,
+      "ms": 5354,
+      "score": 8.5,
+      "reference_score": 8.5,
+      "judge_cost": 0.010002
+    },
+    {
+      "id": "resume",
+      "effort": "medium",
+      "output_tokens": 574,
+      "cost": 0.005868,
+      "ms": 4847,
+      "score": 9.0,
+      "reference_score": 9.0,
+      "judge_cost": 0.009578
+    },
+    {
+      "id": "resume",
+      "effort": "high",
+      "output_tokens": 522,
+      "cost": 0.005348,
+      "ms": 4252,
+      "score": null,
+      "reference_score": null
+    },
+    {
+      "id": "python-csv",
+      "effort": "low",
+      "output_tokens": 1363,
+      "cost": 0.013826,
+      "ms": 8364,
+      "score": 6.0,
+      "reference_score": 8.0,
+      "judge_cost": 0.017724
+    },
+    {
+      "id": "python-csv",
+      "effort": "medium",
+      "output_tokens": 1234,
+      "cost": 0.012536,
+      "ms": 7535,
+      "score": 5.5,
+      "reference_score": 8.0,
+      "judge_cost": 0.018858
+    },
+    {
+      "id": "python-csv",
+      "effort": "high",
+      "output_tokens": 1236,
+      "cost": 0.012556,
+      "ms": 7886,
+      "score": null,
+      "reference_score": null
+    },
+    {
+      "id": "explication",
+      "effort": "low",
+      "output_tokens": 1353,
+      "cost": 0.013678,
+      "ms": 9383,
+      "score": 9.0,
+      "reference_score": 9.0,
+      "judge_cost": 0.018748
+    },
+    {
+      "id": "explication",
+      "effort": "medium",
+      "output_tokens": 1424,
+      "cost": 0.014388,
+      "ms": 10724,
+      "score": 9.0,
+      "reference_score": 9.0,
+      "judge_cost": 0.019862
+    },
+    {
+      "id": "explication",
+      "effort": "high",
+      "output_tokens": 1682,
+      "cost": 0.016968,
+      "ms": 11688,
+      "score": null,
+      "reference_score": null
+    },
+    {
+      "id": "preuve",
+      "effort": "low",
+      "output_tokens": 608,
+      "cost": 0.006216,
+      "ms": 4481,
+      "score": 8.5,
+      "reference_score": 8.0,
+      "judge_cost": 0.011928
+    },
+    {
+      "id": "preuve",
+      "effort": "medium",
+      "output_tokens": 610,
+      "cost": 0.006236,
+      "ms": 3953,
+      "score": 9.0,
+      "reference_score": 8.5,
+      "judge_cost": 0.011796000000000001
+    },
+    {
+      "id": "preuve",
+      "effort": "high",
+      "output_tokens": 619,
+      "cost": 0.006326,
+      "ms": 4331,
+      "score": null,
+      "reference_score": null
+    },
+    {
+      "id": "algo",
+      "effort": "low",
+      "output_tokens": 1357,
+      "cost": 0.013782,
+      "ms": 10269,
+      "score": 6.0,
+      "reference_score": 9.0,
+      "judge_cost": 0.019180000000000003
+    },
+    {
+      "id": "algo",
+      "effort": "medium",
+      "output_tokens": 1449,
+      "cost": 0.014702,
+      "ms": 10757,
+      "score": 9.0,
+      "reference_score": 9.0,
+      "judge_cost": 0.017877999999999998
+    },
+    {
+      "id": "algo",
+      "effort": "high",
+      "output_tokens": 1848,
+      "cost": 0.018692,
+      "ms": 13277,
+      "score": null,
+      "reference_score": null
+    }
+  ]
+}

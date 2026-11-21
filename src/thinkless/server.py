@@ -18,6 +18,7 @@ from .triage import QA
 ROOT = Path(__file__).resolve().parents[2]
 WEB_DIR = ROOT / "web"
 RESULTS_FILE = ROOT / "bench" / "results.json"
+EFFORT_FILE = ROOT / "bench" / "effort.json"
 
 
 class AnswerIn(BaseModel):
@@ -81,7 +82,10 @@ def create_app(llm: LLM | None = None) -> FastAPI:
     def benchmark() -> dict:
         if not RESULTS_FILE.exists():
             return {"available": False}
-        return {"available": True, **json.loads(RESULTS_FILE.read_text())}
+        data = {"available": True, **json.loads(RESULTS_FILE.read_text())}
+        if EFFORT_FILE.exists():
+            data["effort"] = json.loads(EFFORT_FILE.read_text())
+        return data
 
     app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
     return app

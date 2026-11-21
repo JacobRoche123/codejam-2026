@@ -278,6 +278,29 @@ async function loadBenchmark() {
       </tr>`)
     .join("");
   $("#bench").hidden = false;
+  if (data.effort) renderEffort(data.effort);
+}
+
+function renderEffort(effort) {
+  const comma = (x) => String(x).replace(".", ",");
+  const high = effort.summary.find((s) => s.effort === "high");
+  $("#effort-note").textContent = `${effort.model} · ${effort.tasks} tâches`;
+  $("#effort-rows").innerHTML = effort.summary
+    .map((s) => {
+      const relative = high ? Math.round((100 * s.avg_output_tokens) / high.avg_output_tokens) : 100;
+      const quality = s.avg_score === null ? "référence" : `${comma(s.avg_score)} vs ${comma(s.avg_reference_score)}`;
+      return `
+        <tr>
+          <td><strong>${s.effort}</strong></td>
+          <td class="num">${s.avg_output_tokens}</td>
+          <td><div class="bars"><div class="bar routed"><span style="width:${Math.max(2, Math.min(100, relative))}%"></span></div><small class="muted">${relative} %</small></div></td>
+          <td class="num">${usd(s.total_cost)}</td>
+          <td class="num">${comma(s.avg_seconds)} s</td>
+          <td class="num">${quality}</td>
+        </tr>`;
+    })
+    .join("");
+  $("#effort-card").hidden = false;
 }
 
 /* ---------- config ---------- */
