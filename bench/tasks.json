@@ -1,0 +1,22 @@
+[
+  {"id": "capitale", "request": "Quelle est la capitale de l'Australie ?", "expected": "simple"},
+  {"id": "traduction", "request": "Traduis en anglais : « Le cours de demain est annulé à cause de la neige. »", "expected": "simple"},
+  {"id": "conversion", "request": "Combien font 72 degrés Fahrenheit en Celsius ?", "expected": "simple"},
+  {"id": "definition", "request": "C'est quoi une API, en deux phrases ?", "expected": "simple"},
+  {"id": "sentiment", "request": "Ce commentaire est-il positif ou négatif : « Livraison en retard, mais le produit est génial. »", "expected": "simple"},
+  {"id": "reformulation", "request": "Reformule plus poliment : « Envoie-moi ton rapport, t'es en retard. »", "expected": "simple"},
+  {"id": "regex", "request": "Donne une expression régulière qui valide un code postal canadien comme H3A 0G4.", "expected": "simple"},
+  {"id": "acronyme", "request": "Que veut dire ECSESS à McGill ?", "expected": "simple"},
+  {"id": "resume", "request": "Résume les causes principales de la Révolution tranquille au Québec en 5 points.", "expected": "medium"},
+  {"id": "python-csv", "request": "Écris une fonction Python qui lit un fichier CSV de dépenses (date, catégorie, montant) et renvoie le total par catégorie, avec gestion des lignes invalides.", "expected": "medium"},
+  {"id": "comparaison", "request": "Compare PostgreSQL et MongoDB pour une app de réservation de salles d'étude : avantages, inconvénients, et ta recommandation.", "expected": "medium"},
+  {"id": "plan-etude", "request": "Fais-moi un plan de révision sur 2 semaines pour un examen d'algèbre linéaire, 2 heures par jour.", "expected": "medium"},
+  {"id": "explication", "request": "Explique comment fonctionne HTTPS, de la connexion TCP jusqu'au chiffrement des données.", "expected": "medium"},
+  {"id": "sql", "request": "Écris une requête SQL qui trouve, pour chaque étudiant, le cours où il a sa meilleure note (tables etudiants, cours, notes).", "expected": "medium"},
+  {"id": "preuve", "request": "Démontre qu'il existe une infinité de nombres premiers de la forme 4k + 3.", "expected": "complex"},
+  {"id": "architecture", "request": "Conçois l'architecture d'un système de covoiturage étudiant pour 50 000 utilisateurs : composants, base de données, temps réel, paiement, et les compromis de chaque choix.", "expected": "complex"},
+  {"id": "debug", "request": "Ce code Python renvoie parfois une liste qui contient des éléments des appels précédents. Pourquoi, et comment le corriger ?\n\ndef ajouter(x, liste=[]):\n    liste.append(x)\n    return liste", "expected": "medium"},
+  {"id": "algo", "request": "Donne un algorithme en O(n log n) pour trouver le nombre de paires (i, j) avec i < j et a[i] > 2·a[j] dans un tableau, avec la preuve de sa complexité.", "expected": "complex"},
+  {"id": "ambigu-script", "request": "Écris-moi un script pour trier mes fichiers.", "expected": "medium", "context": "Python sur macOS, trier le dossier Téléchargements par extension dans des sous-dossiers."},
+  {"id": "ambigu-courriel", "request": "Rédige un courriel pour demander une prolongation.", "expected": "simple", "context": "À mon professeur de COMP 251, pour un devoir dû vendredi, je demande 3 jours parce que j'étais malade. Ton poli et court."}
+]

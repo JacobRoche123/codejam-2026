@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aiguilleur</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">⑂</span>
+      <div>
+        <h1>Aiguilleur</h1>
+        <p class="tagline">Avant de réfléchir, il demande. Puis il choisit le plus petit modèle qui suffit.</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" class="tab active" data-tab="live" aria-selected="true">Démo en direct</button>
+      <button role="tab" class="tab" data-tab="bench" aria-selected="false">Banc d'essai</button>
+      <button role="tab" class="tab" data-tab="how" aria-selected="false">Comment ça marche</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Live demo -->
+    <section id="tab-live" class="panel active">
+      <div class="grid">
+        <div class="col">
+          <form id="ask-form" class="card">
+            <label for="request" class="card-title">Ta demande</label>
+            <textarea id="request" rows="4" placeholder="Pose n'importe quelle question…" required></textarea>
+            <div class="examples">
+              <span class="muted">Exemples :</span>
+              <button type="button" class="chip" data-example="Quelle est la capitale de l'Australie ?">Simple</button>
+              <button type="button" class="chip" data-example="Écris une fonction Python qui lit un CSV de dépenses et renvoie le total par catégorie.">Moyenne</button>
+              <button type="button" class="chip" data-example="Démontre qu'il existe une infinité de nombres premiers de la forme 4k + 3.">Complexe</button>
+              <button type="button" class="chip" data-example="Écris-moi un script pour trier mes fichiers.">Ambiguë</button>
+            </div>
+            <div class="row">
+              <label class="check"><input type="checkbox" id="compare"> Comparer avec « tout sur Opus »</label>
+              <button type="submit" class="primary" id="send">Envoyer</button>
+            </div>
+          </form>
+
+          <form id="questions-card" class="card accent" hidden>
+            <div class="card-title">L'agent a besoin de précisions</div>
+            <p class="muted small">Une question coûte une fraction de cent. Une mauvaise réponse, elle, coûte tout l'appel.</p>
+            <div id="questions"></div>
+            <div class="row end"><button type="submit" class="primary">Répondre</button></div>
+          </form>
+
+          <div id="answer-card" class="card" hidden>
+            <div class="card-title row">
+              <span>Réponse</span>
+              <span id="tier-badge" class="badge"></span>
+            </div>
+            <p id="reason" class="muted small"></p>
+            <div id="answer" class="answer"></div>
+          </div>
+
+          <div id="error" class="card error" hidden></div>
+        </div>
+
+        <aside class="col">
+          <div class="card">
+            <div class="card-title">Ce que fait l'agent</div>
+            <ol id="trace" class="trace">
+              <li class="empty muted">Envoie une demande pour voir chaque décision, son modèle et son coût.</li>
+            </ol>
+          </div>
+          <div id="totals" class="card" hidden></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Benchmark -->
+    <section id="tab-bench" class="panel">
+      <div id="bench-empty" class="card" hidden>
+        <div class="card-title">Pas encore de résultats</div>
+        <p class="muted">Lance <code>uv run python bench/run.py</code> pour comparer l'aiguilleur à « tout sur Opus ».</p>
+      </div>
+      <div id="bench" hidden>
+        <div class="kpis" id="kpis"></div>
+        <div class="card">
+          <div class="card-title row">
+            <span>Tâche par tâche</span>
+            <span class="muted small" id="bench-note"></span>
+          </div>
+          <div class="table-wrap">
+            <table class="bench-table">
+              <thead>
+                <tr>
+                  <th>Tâche</th>
+                  <th>Niveau choisi</th>
+                  <th class="num">Coût aiguillé</th>
+                  <th class="num">Coût Opus</th>
+                  <th>Comparaison</th>
+                  <th class="num">Qualité</th>
+                </tr>
+              </thead>
+              <tbody id="bench-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="tab-how" class="panel">
+      <div class="card">
+        <div class="card-title">Le chemin d'une demande</div>
+        <ol class="flow">
+          <li><strong>Cache</strong><span>Déjà vue ? Réponse immédiate, 0 $.</span></li>
+          <li><strong>Triage</strong><span>Haiku 5.5 lit la demande, décide s'il manque une info, et classe la difficulté.</span></li>
+          <li><strong>Questions</strong><span>Au plus 3, une seule fois. Mieux vaut demander que répondre à côté.</span></li>
+          <li><strong>Brief</strong><span>Le triage réécrit la demande en consigne précise : format, longueur, contexte.</span></li>
+          <li><strong>Exécution</strong><span id="tiers-list">Le plus petit modèle suffisant répond.</span></li>
+        </ol>
+      </div>
+      <div class="card">
+        <div class="card-title">Pourquoi le coût mesure le calcul</div>
+        <p class="muted">Le prix par jeton suit la taille du modèle : un jeton de Haiku 5.5 coûte 40 fois moins qu'un jeton d'Opus 5.5 en sortie. Moins de dollars, c'est moins de calcul, donc moins d'énergie, à qualité égale.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

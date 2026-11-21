@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "aiguilleur",
+      "runtimeExecutable": "/opt/homebrew/bin/uv",
+      "runtimeArgs": ["run", "aiguilleur"],
+      "port": 8000
+    }
+  ]
+}
