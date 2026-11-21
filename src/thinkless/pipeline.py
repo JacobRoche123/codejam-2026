@@ -4,7 +4,8 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from .config import BASELINE, TIERS, TRIAGE, Tier, cost_usd
+from .cache import confirm_same, find_similar
+from .config import BASELINE, SIMILARITY_THRESHOLD, TIERS, TRIAGE, Tier, cost_usd
 from .llm import LLM, LLMResult
 from .triage import QA, triage
 
@@ -158,6 +159,7 @@ class Router:
         if not request:
             raise ValueError("La demande est vide.")
 
+        # Filter 0: the exact same question (ignoring case and spaces) is free.
         key = cache_key(request, answers)
         hit = self.cache.get(key)
         if hit is not None:
@@ -168,15 +170,30 @@ class Router:
                 tier_label="Cache local",
                 detail="Même demande déjà traitée : aucun appel au modèle.",
             )
-            return Outcome(
-                status="done",
-                steps=[step],
-                complexity=hit.complexity,
-                reason=hit.reason,
-                brief=hit.brief,
-                answer=hit.answer,
-                cached=True,
-            )
+            return self._from_cache(hit, [step])
+
+        steps: list[Step] = []
+
+        # Filters 1 and 2: a similar question, confirmed by Haiku, reuses the earlier answer.
+        # Questions answered after a clarification round are left out to keep things simple.
+        if not answers:
+            known = [k for k in self.cache if "||" not in k]
+            match, score = find_similar(request, known)
+            if match is not None and score >= SIMILARITY_THRESHOLD:
+                same, why, call = confirm_same(self.llm, request, match)
+                percent = round(score * 100)
+                step = Step.from_call(
+                    "cache_check",
+                    f"Question similaire à {percent} %",
+                    TRIAGE,
+                    call,
+                    f"Proche de « {match} ». "
+                    + ("Haiku confirme : même réponse. " if same else "Haiku refuse : réponse différente. ")
+                    + why,
+                )
+                if same:
+                    return self._from_cache(self.cache[match], [step])
+                steps.append(step)
 
         verdict = triage(self.llm, request, answers)
         tier = TIERS[verdict.complexity]
@@ -185,7 +202,7 @@ class Router:
             if verdict.needs_answers
             else f"Tâche « {verdict.complexity} » → {tier.label}. {verdict.reason}"
         )
-        steps = [Step.from_call("triage", "Triage de la demande", TRIAGE, verdict.call, triage_detail)]
+        steps.append(Step.from_call("triage", "Triage de la demande", TRIAGE, verdict.call, triage_detail))
 
         if verdict.needs_answers:
             return Outcome(
@@ -244,6 +261,19 @@ class Router:
 
         self.cache[key] = outcome
         return outcome
+
+    @staticmethod
+    def _from_cache(hit: Outcome, steps: list[Step]) -> Outcome:
+        """Builds the outcome for a cache hit: the earlier answer, with this request's own steps."""
+        return Outcome(
+            status="done",
+            steps=steps,
+            complexity=hit.complexity,
+            reason=hit.reason,
+            brief=hit.brief,
+            answer=hit.answer,
+            cached=True,
+        )
 
     @staticmethod
     def _raw_prompt(request: str, answers: list[QA] | None) -> str:

@@ -45,6 +45,10 @@ FALLBACK_MODELS = {"claude-sonnet-5-5", "claude-opus-5-5"}
 
 MAX_QUESTIONS = 3
 
+# Similarity cache: from this score on, Haiku checks whether two questions need the same answer.
+# Text similarity alone is not enough: "capitale de la France" vs "de l'Allemagne" scores 0.87.
+SIMILARITY_THRESHOLD = 0.75
+
 
 def cost_usd(
     model: str,
