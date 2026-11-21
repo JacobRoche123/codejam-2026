@@ -1,7 +1,7 @@
 "use strict";
 
 const $ = (sel) => document.querySelector(sel);
-const TIER_NAMES = { simple: "Simple", medium: "Moyenne", complex: "Complexe" };
+const TIER_NAMES = { simple: "Simple", medium: "Medium", complex: "Complex" };
 
 const state = { request: "", questions: [], config: null };
 
@@ -9,13 +9,13 @@ const state = { request: "", questions: [], config: null };
 
 function usd(x) {
   if (x === null || x === undefined) return "–";
-  if (x === 0) return "0 $";
-  if (x < 0.01) return `${(x * 100).toFixed(3).replace(".", ",")} ¢`;
-  return `${x.toFixed(4).replace(".", ",")} $`;
+  if (x === 0) return "$0";
+  if (x < 0.01) return `${(x * 100).toFixed(3)} ¢`;
+  return "$" + x.toFixed(4);
 }
 
 function ms(x) {
-  return x >= 1000 ? `${(x / 1000).toFixed(1).replace(".", ",")} s` : `${x} ms`;
+  return x >= 1000 ? `${(x / 1000).toFixed(1)} s` : `${x} ms`;
 }
 
 function escapeHtml(s) {
@@ -95,12 +95,12 @@ function setBusy(busy, label) {
 
 function stepHtml(step, complexity) {
   const tierClass = step.kind === "execute" ? complexity : "";
-  const tokens = step.kind === "cache" ? "0 jeton" : `${step.input_tokens} → ${step.output_tokens} jetons`;
+  const tokens = step.kind === "cache" ? "0 tokens" : `${step.input_tokens} → ${step.output_tokens} tokens`;
   return `
     <li class="step ${step.kind} ${tierClass}">
       <div class="step-head"><span>${escapeHtml(step.title)}</span><span>${usd(step.cost_usd)}</span></div>
       <div class="step-model">${escapeHtml(step.tier_label)}${step.model !== "cache" ? ` · <code>${escapeHtml(step.model)}</code>` : ""}</div>
-      <div class="step-meta"><span>${tokens}</span>${step.latency_ms ? `<span>${ms(step.latency_ms)}</span>` : ""}${step.cache_read_tokens ? `<span>${step.cache_read_tokens} en cache</span>` : ""}</div>
+      <div class="step-meta"><span>${tokens}</span>${step.latency_ms ? `<span>${ms(step.latency_ms)}</span>` : ""}${step.cache_read_tokens ? `<span>${step.cache_read_tokens} cached</span>` : ""}</div>
       ${step.detail ? `<div class="step-detail">${escapeHtml(step.detail)}</div>` : ""}
     </li>`;
 }
@@ -108,21 +108,21 @@ function stepHtml(step, complexity) {
 function renderTotals(data) {
   const box = $("#totals");
   const routedCost = data.steps.filter((s) => s.kind !== "baseline").reduce((a, s) => a + s.cost_usd, 0) + (state.questionCost || 0);
-  let html = `<div class="card-title">Bilan</div>
-    <div class="total-row"><span>Coût total avec ThinkLess</span><strong>${usd(routedCost)}</strong></div>`;
+  let html = `<div class="card-title">Summary</div>
+    <div class="total-row"><span>Total cost with ThinkLess</span><strong>${usd(routedCost)}</strong></div>`;
   if (data.baseline_cost) {
     const savings = Math.round(100 * (1 - routedCost / data.baseline_cost));
     const max = Math.max(routedCost, data.baseline_cost);
     html += `
-      <div class="total-row"><span>Même demande, tout sur Opus</span><strong>${usd(data.baseline_cost)}</strong></div>
+      <div class="total-row"><span>Same request, everything on Opus</span><strong>${usd(data.baseline_cost)}</strong></div>
       <div class="bars" style="margin:10px 0">
         <div class="bar routed" title="ThinkLess"><span style="width:${(100 * routedCost) / max}%"></span></div>
-        <div class="bar base" title="Tout sur Opus"><span style="width:${(100 * data.baseline_cost) / max}%"></span></div>
+        <div class="bar base" title="Everything on Opus"><span style="width:${(100 * data.baseline_cost) / max}%"></span></div>
       </div>
       <div class="savings">${savings > 0 ? `−${savings} %` : `+${-savings} %`}</div>
-      <div class="muted small">de calcul facturé par rapport à « tout sur Opus ».</div>`;
+      <div class="muted small">billed compute compared with "everything on Opus".</div>`;
   } else if (!data.cached) {
-    html += `<p class="muted small">Coche « Comparer avec tout sur Opus » pour voir l'économie.</p>`;
+    html += `<p class="muted small">Tick "Compare with everything on Opus" to see the savings.</p>`;
   }
   box.innerHTML = html;
   box.hidden = false;
@@ -131,7 +131,7 @@ function renderTotals(data) {
 async function ask(answers) {
   $("#error").hidden = true;
   const compare = $("#compare").checked;
-  setBusy(true, compare ? "L'agent travaille… (Opus tourne en parallèle pour comparer)" : "L'agent travaille…");
+  setBusy(true, compare ? "The agent is working… (Opus runs in parallel for comparison)" : "The agent is working…");
   try {
     const res = await fetch("/api/ask", {
       method: "POST",
@@ -139,7 +139,7 @@ async function ask(answers) {
       body: JSON.stringify({ request: state.request, answers, compare }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail?.[0]?.msg || data.detail || `Erreur ${res.status}`);
+    if (!res.ok) throw new Error(data.detail?.[0]?.msg || data.detail || `Error ${res.status}`);
     setBusy(false);
 
     if (!answers) $("#trace").innerHTML = "";
@@ -170,7 +170,7 @@ async function ask(answers) {
 /* Advisor mode: ask ThinkLess which model to use, without generating an answer. */
 async function advise(answers) {
   $("#error").hidden = true;
-  setBusy(true, "ThinkLess analyse la demande…");
+  setBusy(true, "ThinkLess is analysing the request…");
   try {
     const res = await fetch("/api/route", {
       method: "POST",
@@ -178,7 +178,7 @@ async function advise(answers) {
       body: JSON.stringify({ request: state.request, answers }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail?.[0]?.msg || data.detail || `Erreur ${res.status}`);
+    if (!res.ok) throw new Error(data.detail?.[0]?.msg || data.detail || `Error ${res.status}`);
     setBusy(false);
 
     if (!answers) $("#trace").innerHTML = "";
@@ -256,17 +256,17 @@ async function loadBenchmark() {
   benchLoaded = true;
   const s = data.summary;
   $("#kpis").innerHTML = `
-    <div class="card kpi highlight"><div class="label">Calcul facturé en moins</div><div class="value">−${Math.round(s.savings_pct)} %</div><div class="sub">${usd(s.routed_cost)} au lieu de ${usd(s.baseline_cost)}</div></div>
-    <div class="card kpi"><div class="label">Qualité moyenne</div><div class="value">${String(s.routed_quality).replace(".", ",")}/10</div><div class="sub">Opus seul : ${String(s.baseline_quality).replace(".", ",")}/10</div></div>
-    <div class="card kpi"><div class="label">Niveau attendu trouvé</div><div class="value">${s.tier_match}/${s.tasks}</div><div class="sub">tâches classées comme prévu</div></div>
-    <div class="card kpi"><div class="label">Tâches testées</div><div class="value">${s.tasks}</div><div class="sub">notées à l'aveugle par ${escapeHtml(s.judge_model)}</div></div>`;
-  $("#bench-note").textContent = "Vert : ThinkLess · Rouge : tout sur Opus";
+    <div class="card kpi highlight"><div class="label">Less billed compute</div><div class="value">−${Math.round(s.savings_pct)} %</div><div class="sub">${usd(s.routed_cost)} instead of ${usd(s.baseline_cost)}</div></div>
+    <div class="card kpi"><div class="label">Average quality</div><div class="value">${s.routed_quality}/10</div><div class="sub">Opus alone: ${s.baseline_quality}/10</div></div>
+    <div class="card kpi"><div class="label">Expected tier found</div><div class="value">${s.tier_match}/${s.tasks}</div><div class="sub">tasks classified as expected</div></div>
+    <div class="card kpi"><div class="label">Tasks tested</div><div class="value">${s.tasks}</div><div class="sub">graded blind by ${escapeHtml(s.judge_model)}</div></div>`;
+  $("#bench-note").textContent = "Green: ThinkLess · Red: everything on Opus";
 
   const max = Math.max(...data.rows.map((r) => Math.max(r.routed_cost, r.baseline_cost)));
   $("#bench-rows").innerHTML = data.rows
     .map((r) => `
       <tr>
-        <td class="task">${escapeHtml(r.request.split("\n")[0].slice(0, 90))}${r.questions.length ? `<small>${r.questions.length} question(s) posée(s) d'abord</small>` : ""}</td>
+        <td class="task">${escapeHtml(r.request.split("\n")[0].slice(0, 90))}${r.questions.length ? `<small>${r.questions.length} question(s) asked first</small>` : ""}</td>
         <td><span class="badge ${r.chosen}">${TIER_NAMES[r.chosen] || r.chosen}</span></td>
         <td class="num">${usd(r.routed_cost)}</td>
         <td class="num">${usd(r.baseline_cost)}</td>
@@ -274,7 +274,7 @@ async function loadBenchmark() {
           <div class="bar routed"><span style="width:${Math.max(1, (100 * r.routed_cost) / max)}%"></span></div>
           <div class="bar base"><span style="width:${Math.max(1, (100 * r.baseline_cost) / max)}%"></span></div>
         </div></td>
-        <td class="num">${String(r.routed_score).replace(".", ",")} vs ${String(r.baseline_score).replace(".", ",")}</td>
+        <td class="num">${r.routed_score} vs ${r.baseline_score}</td>
       </tr>`)
     .join("");
   $("#bench").hidden = false;
@@ -282,13 +282,13 @@ async function loadBenchmark() {
 }
 
 function renderEffort(effort) {
-  const comma = (x) => String(x).replace(".", ",");
+  const comma = (x) => String(x);
   const high = effort.summary.find((s) => s.effort === "high");
-  $("#effort-note").textContent = `${effort.model} · ${effort.tasks} tâches`;
+  $("#effort-note").textContent = `${effort.model} · ${effort.tasks} tasks`;
   $("#effort-rows").innerHTML = effort.summary
     .map((s) => {
       const relative = high ? Math.round((100 * s.avg_output_tokens) / high.avg_output_tokens) : 100;
-      const quality = s.avg_score === null ? "référence" : `${comma(s.avg_score)} vs ${comma(s.avg_reference_score)}`;
+      const quality = s.avg_score === null ? "reference" : `${comma(s.avg_score)} vs ${comma(s.avg_reference_score)}`;
       return `
         <tr>
           <td><strong>${s.effort}</strong></td>
@@ -310,6 +310,6 @@ fetch("/api/config")
   .then((cfg) => {
     state.config = cfg;
     $("#tiers-list").textContent =
-      `Simple → ${cfg.tiers.simple} · Moyenne → ${cfg.tiers.medium} · Complexe → ${cfg.tiers.complex}.`;
+      `Simple → ${cfg.tiers.simple} · Medium → ${cfg.tiers.medium} · Complex → ${cfg.tiers.complex}.`;
   })
   .catch(() => {});

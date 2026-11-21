@@ -45,7 +45,7 @@ def test_similar_but_different_question_is_answered_normally():
 
     assert not second.cached
     assert [s.kind for s in second.steps] == ["cache_check", "triage", "execute"]
-    assert "refuse" in second.steps[0].detail
+    assert "rejects" in second.steps[0].detail
 
 
 def test_unrelated_question_skips_the_check():

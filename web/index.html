@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,13 +12,13 @@
       <span class="logo" aria-hidden="true">⑂</span>
       <div>
         <h1>ThinkLess</h1>
-        <p class="tagline">Avant de réfléchir, il demande. Puis il choisit le plus petit modèle qui suffit.</p>
+        <p class="tagline">Ask before thinking. Then use the smallest model that does the job.</p>
       </div>
     </div>
     <nav class="tabs" role="tablist">
-      <button role="tab" class="tab active" data-tab="live" aria-selected="true">Démo en direct</button>
-      <button role="tab" class="tab" data-tab="bench" aria-selected="false">Banc d'essai</button>
-      <button role="tab" class="tab" data-tab="how" aria-selected="false">Comment ça marche</button>
+      <button role="tab" class="tab active" data-tab="live" aria-selected="true">Live demo</button>
+      <button role="tab" class="tab" data-tab="bench" aria-selected="false">Benchmark</button>
+      <button role="tab" class="tab" data-tab="how" aria-selected="false">How it works</button>
     </nav>
   </header>
 
@@ -28,34 +28,34 @@
       <div class="grid">
         <div class="col">
           <form id="ask-form" class="card">
-            <label for="request" class="card-title">Ta demande</label>
-            <textarea id="request" rows="4" placeholder="Pose n'importe quelle question…" required></textarea>
+            <label for="request" class="card-title">Your request</label>
+            <textarea id="request" rows="4" placeholder="Ask anything…" required></textarea>
             <div class="examples">
-              <span class="muted">Exemples :</span>
-              <button type="button" class="chip" data-example="Quelle est la capitale de l'Australie ?">Simple</button>
-              <button type="button" class="chip" data-example="Écris une fonction Python qui lit un CSV de dépenses et renvoie le total par catégorie.">Moyenne</button>
-              <button type="button" class="chip" data-example="Démontre qu'il existe une infinité de nombres premiers de la forme 4k + 3.">Complexe</button>
-              <button type="button" class="chip" data-example="Écris-moi un script pour trier mes fichiers.">Ambiguë</button>
+              <span class="muted">Examples:</span>
+              <button type="button" class="chip" data-example="What is the capital of Australia?">Simple</button>
+              <button type="button" class="chip" data-example="Write a Python function that reads a CSV of expenses and returns the total per category.">Medium</button>
+              <button type="button" class="chip" data-example="Prove that there are infinitely many primes of the form 4k + 3.">Complex</button>
+              <button type="button" class="chip" data-example="Write me a script to sort my files.">Ambiguous</button>
             </div>
             <div class="row">
               <div class="checks">
-                <label class="check"><input type="checkbox" id="compare"> Comparer avec « tout sur Opus »</label>
-                <label class="check"><input type="checkbox" id="advisor"> Mode conseiller (dit quel modèle utiliser, sans répondre)</label>
+                <label class="check"><input type="checkbox" id="compare"> Compare with "everything on Opus"</label>
+                <label class="check"><input type="checkbox" id="advisor"> Advisor mode (says which model to use, without answering)</label>
               </div>
-              <button type="submit" class="primary" id="send">Envoyer</button>
+              <button type="submit" class="primary" id="send">Send</button>
             </div>
           </form>
 
           <form id="questions-card" class="card accent" hidden>
-            <div class="card-title">L'agent a besoin de précisions</div>
-            <p class="muted small">Une question coûte une fraction de cent. Une mauvaise réponse, elle, coûte tout l'appel.</p>
+            <div class="card-title">The agent needs a few details</div>
+            <p class="muted small">A question costs a fraction of a cent. A wrong answer costs the whole call.</p>
             <div id="questions"></div>
-            <div class="row end"><button type="submit" class="primary">Répondre</button></div>
+            <div class="row end"><button type="submit" class="primary">Answer</button></div>
           </form>
 
           <div id="answer-card" class="card" hidden>
             <div class="card-title row">
-              <span>Réponse</span>
+              <span>Answer</span>
               <span id="tier-badge" class="badge"></span>
             </div>
             <p id="reason" class="muted small"></p>
@@ -63,14 +63,14 @@
           </div>
 
           <div id="advice-card" class="card accent" hidden>
-            <div class="card-title">Conseil de ThinkLess à ton agent</div>
+            <div class="card-title">ThinkLess advice for your agent</div>
             <div class="advice-main">
               <span id="advice-badge" class="badge"></span>
-              <span>Utilise <code id="advice-model"></code> avec l'effort <strong id="advice-effort"></strong></span>
+              <span>Use <code id="advice-model"></code> with effort <strong id="advice-effort"></strong></span>
             </div>
             <p id="advice-reason" class="muted small"></p>
             <details>
-              <summary class="small">Réponse JSON envoyée à l'agent</summary>
+              <summary class="small">JSON sent to the agent</summary>
               <pre id="advice-json"></pre>
             </details>
           </div>
@@ -80,9 +80,9 @@
 
         <aside class="col">
           <div class="card">
-            <div class="card-title">Ce que fait l'agent</div>
+            <div class="card-title">What the agent does</div>
             <ol id="trace" class="trace">
-              <li class="empty muted">Envoie une demande pour voir chaque décision, son modèle et son coût.</li>
+              <li class="empty muted">Send a request to see every decision, its model and its cost.</li>
             </ol>
           </div>
           <div id="totals" class="card" hidden></div>
@@ -93,26 +93,26 @@
     <!-- Benchmark -->
     <section id="tab-bench" class="panel">
       <div id="bench-empty" class="card" hidden>
-        <div class="card-title">Pas encore de résultats</div>
-        <p class="muted">Lance <code>uv run python bench/run.py</code> pour comparer ThinkLess à « tout sur Opus ».</p>
+        <div class="card-title">No results yet</div>
+        <p class="muted">Run <code>uv run python bench/run.py</code> to compare ThinkLess with "everything on Opus".</p>
       </div>
       <div id="bench" hidden>
         <div class="kpis" id="kpis"></div>
         <div class="card">
           <div class="card-title row">
-            <span>Tâche par tâche</span>
+            <span>Task by task</span>
             <span class="muted small" id="bench-note"></span>
           </div>
           <div class="table-wrap">
             <table class="bench-table">
               <thead>
                 <tr>
-                  <th>Tâche</th>
-                  <th>Niveau choisi</th>
-                  <th class="num">Coût aiguillé</th>
-                  <th class="num">Coût Opus</th>
-                  <th>Comparaison</th>
-                  <th class="num">Qualité</th>
+                  <th>Task</th>
+                  <th>Chosen tier</th>
+                  <th class="num">Routed cost</th>
+                  <th class="num">Opus cost</th>
+                  <th>Comparison</th>
+                  <th class="num">Quality</th>
                 </tr>
               </thead>
               <tbody id="bench-rows"></tbody>
@@ -122,20 +122,20 @@
 
         <div class="card" id="effort-card" hidden>
           <div class="card-title row">
-            <span>Modes de réflexion : le même modèle, plus ou moins d'effort</span>
+            <span>Thinking modes: same model, more or less effort</span>
             <span class="muted small" id="effort-note"></span>
           </div>
-          <p class="muted small">Quand un modèle réfléchit, il écrit un brouillon invisible facturé comme du texte. Moins de jetons, c'est moins de calcul. Mesuré sur des appels réels ; l'énergie en Wh n'est pas publiée, donc non affichée.</p>
+          <p class="muted small">When a model thinks, it writes an invisible draft billed like text. Fewer tokens means less compute. Measured on real calls; energy in Wh is not published, so it is not shown.</p>
           <div class="table-wrap">
             <table class="bench-table">
               <thead>
                 <tr>
                   <th>Effort</th>
-                  <th class="num">Jetons de sortie (moy.)</th>
-                  <th>Calcul relatif</th>
-                  <th class="num">Coût total</th>
-                  <th class="num">Temps (moy.)</th>
-                  <th class="num">Qualité vs high</th>
+                  <th class="num">Output tokens (avg)</th>
+                  <th>Relative compute</th>
+                  <th class="num">Total cost</th>
+                  <th class="num">Time (avg)</th>
+                  <th class="num">Quality vs high</th>
                 </tr>
               </thead>
               <tbody id="effort-rows"></tbody>
@@ -148,18 +148,18 @@
     <!-- How it works -->
     <section id="tab-how" class="panel">
       <div class="card">
-        <div class="card-title">Le chemin d'une demande</div>
+        <div class="card-title">The path of a request</div>
         <ol class="flow">
-          <li><strong>Cache</strong><span>Déjà vue ? Réponse immédiate, 0 $.</span></li>
-          <li><strong>Triage</strong><span>Haiku 5.5 lit la demande, décide s'il manque une info, et classe la difficulté.</span></li>
-          <li><strong>Questions</strong><span>Au plus 3, une seule fois. Mieux vaut demander que répondre à côté.</span></li>
-          <li><strong>Brief</strong><span>Le triage réécrit la demande en consigne précise : format, longueur, contexte.</span></li>
-          <li><strong>Exécution</strong><span id="tiers-list">Le plus petit modèle suffisant répond.</span></li>
+          <li><strong>Cache</strong><span>Seen before, or 75 %+ similar and confirmed by Haiku? Reuse the answer.</span></li>
+          <li><strong>Triage</strong><span>Haiku 5.5 reads the request, checks whether anything essential is missing, and rates how hard it is.</span></li>
+          <li><strong>Questions</strong><span>At most 3, only once. Better to ask than to answer the wrong question.</span></li>
+          <li><strong>Brief</strong><span>The triage adds notes on format and length; the original request always wins.</span></li>
+          <li><strong>Answer</strong><span id="tiers-list">The smallest sufficient model answers.</span></li>
         </ol>
       </div>
       <div class="card">
-        <div class="card-title">Pourquoi le coût mesure le calcul</div>
-        <p class="muted">Le prix par jeton suit la taille du modèle : un jeton de Haiku 5.5 coûte 40 fois moins qu'un jeton d'Opus 5.5 en sortie. Moins de dollars, c'est moins de calcul, donc moins d'énergie, à qualité égale.</p>
+        <div class="card-title">Why cost measures compute</div>
+        <p class="muted">Price per token follows model size: an output token from Haiku 5.5 costs 40 times less than one from Opus 5.5. Fewer dollars means less compute, so less energy, at equal quality.</p>
       </div>
     </section>
   </main>

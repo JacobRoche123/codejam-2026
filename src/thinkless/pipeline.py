@@ -122,15 +122,15 @@ class Router:
         """Advisor mode: triage only. Says which model and effort to use, never answers."""
         request = request.strip()
         if not request:
-            raise ValueError("La demande est vide.")
+            raise ValueError("The request is empty.")
 
         verdict = triage(self.llm, request, answers)
         detail = (
-            f"{len(verdict.questions)} question(s) à poser d'abord."
+            f"{len(verdict.questions)} question(s) to ask first."
             if verdict.needs_answers
-            else "Conseil seulement : aucune réponse générée."
+            else "Advice only: no answer generated."
         )
-        step = Step.from_call("triage", "Triage de la demande", TRIAGE, verdict.call, detail)
+        step = Step.from_call("triage", "Triage", TRIAGE, verdict.call, detail)
         result: dict[str, Any] = {
             "status": "needs_answers" if verdict.needs_answers else "route",
             "questions": verdict.questions,
@@ -157,7 +157,7 @@ class Router:
     ) -> Outcome:
         request = request.strip()
         if not request:
-            raise ValueError("La demande est vide.")
+            raise ValueError("The request is empty.")
 
         # Filter 0: the exact same question (ignoring case and spaces) is free.
         key = cache_key(request, answers)
@@ -165,10 +165,10 @@ class Router:
         if hit is not None:
             step = Step(
                 kind="cache",
-                title="Réponse déjà calculée",
+                title="Answer already computed",
                 model="cache",
-                tier_label="Cache local",
-                detail="Même demande déjà traitée : aucun appel au modèle.",
+                tier_label="Local cache",
+                detail="Same request already handled: no model call.",
             )
             return self._from_cache(hit, [step])
 
@@ -184,11 +184,11 @@ class Router:
                 percent = round(score * 100)
                 step = Step.from_call(
                     "cache_check",
-                    f"Question similaire à {percent} %",
+                    f"Similar question ({percent} %)",
                     TRIAGE,
                     call,
-                    f"Proche de « {match} ». "
-                    + ("Haiku confirme : même réponse. " if same else "Haiku refuse : réponse différente. ")
+                    f"Close to \"{match}\". "
+                    + ("Haiku confirms: same answer. " if same else "Haiku rejects: different answer. ")
                     + why,
                 )
                 if same:
@@ -198,11 +198,11 @@ class Router:
         verdict = triage(self.llm, request, answers)
         tier = TIERS[verdict.complexity]
         triage_detail = (
-            f"{len(verdict.questions)} question(s) à poser avant de répondre."
+            f"{len(verdict.questions)} question(s) to ask before answering."
             if verdict.needs_answers
-            else f"Tâche « {verdict.complexity} » → {tier.label}. {verdict.reason}"
+            else f"\"{verdict.complexity}\" task → {tier.label}. {verdict.reason}"
         )
-        steps.append(Step.from_call("triage", "Triage de la demande", TRIAGE, verdict.call, triage_detail))
+        steps.append(Step.from_call("triage", "Triage", TRIAGE, verdict.call, triage_detail))
 
         if verdict.needs_answers:
             return Outcome(
@@ -233,8 +233,8 @@ class Router:
             system=EXECUTOR_SYSTEM,
             messages=[{"role": "user", "content": executor_prompt(request, brief)}],
         )
-        detail = "" if call.model == tier.model else f"Repli automatique vers {call.model}."
-        steps.append(Step.from_call("execute", "Réponse", tier, call, detail))
+        detail = "" if call.model == tier.model else f"Automatic fallback to {call.model}."
+        steps.append(Step.from_call("execute", "Answer", tier, call, detail))
 
         outcome = Outcome(
             status="done",
@@ -251,10 +251,10 @@ class Router:
             outcome.steps.append(
                 Step.from_call(
                     "baseline",
-                    "Comparaison : tout sur Opus",
+                    "Comparison: everything on Opus",
                     BASELINE,
                     base_call,
-                    "Ce que coûterait la même demande sans aiguillage.",
+                    "What the same request would cost without routing.",
                 )
             )
             outcome.baseline_answer = base_call.text
@@ -280,4 +280,4 @@ class Router:
         if not answers:
             return request
         extra = "\n".join(f"- {qa.question} {qa.answer}" for qa in answers)
-        return f"{request}\n\nPrécisions :\n{extra}"
+        return f"{request}\n\nDetails:\n{extra}"

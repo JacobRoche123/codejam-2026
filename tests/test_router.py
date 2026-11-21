@@ -90,7 +90,7 @@ def test_fallback_model_is_shown_in_trace():
     llm = FakeLLM([verdict(complexity="complex")], fallback_to="claude-opus-4-8")
     outcome = Router(llm).ask("question")
     assert outcome.steps[1].model == "claude-opus-4-8"
-    assert "Repli" in outcome.steps[1].detail
+    assert "fallback" in outcome.steps[1].detail
 
 
 def test_advisor_mode_recommends_without_answering():

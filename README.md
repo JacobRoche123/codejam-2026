@@ -194,7 +194,7 @@ read -s "K?Paste your Anthropic API key: " && printf 'ANTHROPIC_API_KEY=%s\n' "$
 uv run thinkless
 ```
 
-Click the "Simple" example, tick "Comparer avec « tout sur Opus »" and press "Envoyer". The right column shows each decision, its model, tokens and cost. Stop the server with `Ctrl+C`.
+Click the "Simple" example, tick "Compare with everything on Opus" and press "Send". The right column shows each decision, its model, tokens and cost. Stop the server with `Ctrl+C`.
 
 **6. (Optional) Plug ThinkLess into Claude Code** as an MCP tool. Replace the path with where you cloned the project:
 

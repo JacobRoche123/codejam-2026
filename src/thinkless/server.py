@@ -64,19 +64,19 @@ def create_app(llm: LLM | None = None) -> FastAPI:
         return run_safely(lambda: router().route(body.request, answers))
 
     def run_safely(action: Callable[[], dict]) -> dict:
-        """Runs a router call and turns API errors into clear French messages."""
+        """Runs a router call and turns API errors into clear messages."""
         try:
             return action()
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
         except anthropic.AuthenticationError as exc:
-            raise HTTPException(502, "Clé API refusée : vérifie .env.local.") from exc
+            raise HTTPException(502, "API key rejected: check .env.local.") from exc
         except anthropic.RateLimitError as exc:
-            raise HTTPException(429, "Limite de requêtes atteinte, réessaie dans un instant.") from exc
+            raise HTTPException(429, "Rate limit reached, try again in a moment.") from exc
         except anthropic.APIStatusError as exc:
-            raise HTTPException(502, f"Erreur de l'API Claude ({exc.status_code}).") from exc
+            raise HTTPException(502, f"Claude API error ({exc.status_code}).") from exc
         except anthropic.APIConnectionError as exc:
-            raise HTTPException(503, "Impossible de joindre l'API Claude.") from exc
+            raise HTTPException(503, "Cannot reach the Claude API.") from exc
 
     @app.get("/api/benchmark")
     def benchmark() -> dict:
