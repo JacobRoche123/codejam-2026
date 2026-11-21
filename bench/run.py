@@ -16,10 +16,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from aiguilleur.config import cost_usd
-from aiguilleur.llm import AnthropicLLM
-from aiguilleur.pipeline import Router
-from aiguilleur.triage import QA
+from thinkless.config import cost_usd
+from thinkless.llm import AnthropicLLM
+from thinkless.pipeline import Router
+from thinkless.triage import QA
 
 ROOT = Path(__file__).resolve().parents[1]
 JUDGE_MODEL, JUDGE_EFFORT = "claude-sonnet-5-5", "medium"

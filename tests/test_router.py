@@ -1,10 +1,10 @@
 import pytest
 from conftest import FakeLLM, verdict
 
-from aiguilleur.config import cost_usd
-from aiguilleur.llm import LLMResult
-from aiguilleur.pipeline import Router
-from aiguilleur.triage import QA, parse_verdict
+from thinkless.config import cost_usd
+from thinkless.llm import LLMResult
+from thinkless.pipeline import Router
+from thinkless.triage import QA, parse_verdict
 
 
 def test_cost_matches_published_prices():
@@ -91,6 +91,28 @@ def test_fallback_model_is_shown_in_trace():
     outcome = Router(llm).ask("question")
     assert outcome.steps[1].model == "claude-opus-4-8"
     assert "Repli" in outcome.steps[1].detail
+
+
+def test_advisor_mode_recommends_without_answering():
+    llm = FakeLLM([verdict(complexity="medium", reason="du code à écrire")])
+    advice = Router(llm).route("Écris une fonction de tri")
+    assert advice["status"] == "route"
+    assert advice["recommendation"] == {
+        "tier": "medium",
+        "model": "claude-sonnet-5-5",
+        "effort": "medium",
+        "label": "Sonnet 5.5 · effort medium",
+    }
+    assert len(llm.calls) == 1  # only the triage ran: no answer was generated
+    assert advice["triage_cost"] > 0
+
+
+def test_advisor_mode_passes_questions_through():
+    llm = FakeLLM([verdict(clarity="ambiguous", questions=["Pour qui ?"])])
+    advice = Router(llm).route("Écris un courriel")
+    assert advice["status"] == "needs_answers"
+    assert advice["questions"] == ["Pour qui ?"]
+    assert "recommendation" not in advice
 
 
 def test_empty_request_is_rejected():

@@ -1,4 +1,4 @@
-"""Aiguilleur: ask before thinking, then pick the smallest model that does the job."""
+"""ThinkLess: ask before thinking, then pick the smallest model that does the job."""
 
 
 def main() -> None:

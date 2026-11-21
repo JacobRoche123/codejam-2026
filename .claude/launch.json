@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "aiguilleur",
+      "name": "thinkless",
       "runtimeExecutable": "/opt/homebrew/bin/uv",
-      "runtimeArgs": ["run", "aiguilleur"],
+      "runtimeArgs": ["run", "thinkless"],
       "port": 8000
     }
   ]

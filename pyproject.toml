@@ -1,7 +1,7 @@
 [project]
-name = "aiguilleur"
+name = "thinkless"
 version = "0.1.0"
-description = "Avant de réfléchir, il demande : un aiguilleur qui choisit le plus petit modèle Claude suffisant."
+description = "Avant de réfléchir, il demande : ThinkLess choisit le plus petit modèle Claude suffisant."
 authors = [
     { name = "Jacob Roche", email = "358796410+JacobRoche123@users.noreply.github.com" }
 ]
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-aiguilleur = "aiguilleur:main"
+thinkless = "thinkless:main"
 
 [build-system]
 requires = ["uv_build>=0.13.9,<0.14.0"]

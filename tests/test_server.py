@@ -1,7 +1,7 @@
 from conftest import FakeLLM, verdict
 from fastapi.testclient import TestClient
 
-from aiguilleur.server import create_app
+from thinkless.server import create_app
 
 
 def test_ask_then_answer_flow():
@@ -22,6 +22,14 @@ def test_ask_then_answer_flow():
     assert second["status"] == "done"
     assert second["complexity"] == "medium"
     assert second["total_cost"] > 0
+
+
+def test_route_endpoint_returns_advice_only():
+    client = TestClient(create_app(FakeLLM([verdict(complexity="complex")])))
+    advice = client.post("/api/route", json={"request": "Démontre ce théorème"}).json()
+    assert advice["status"] == "route"
+    assert advice["recommendation"]["model"] == "claude-opus-5-5"
+    assert "answer" not in advice
 
 
 def test_empty_request_is_a_validation_error():

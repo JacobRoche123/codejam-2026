@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 
-from aiguilleur.llm import LLMResult
+from thinkless.llm import LLMResult
 
 
 class FakeLLM:

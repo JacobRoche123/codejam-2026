@@ -109,14 +109,14 @@ function renderTotals(data) {
   const box = $("#totals");
   const routedCost = data.steps.filter((s) => s.kind !== "baseline").reduce((a, s) => a + s.cost_usd, 0) + (state.questionCost || 0);
   let html = `<div class="card-title">Bilan</div>
-    <div class="total-row"><span>Coût total avec l'aiguilleur</span><strong>${usd(routedCost)}</strong></div>`;
+    <div class="total-row"><span>Coût total avec ThinkLess</span><strong>${usd(routedCost)}</strong></div>`;
   if (data.baseline_cost) {
     const savings = Math.round(100 * (1 - routedCost / data.baseline_cost));
     const max = Math.max(routedCost, data.baseline_cost);
     html += `
       <div class="total-row"><span>Même demande, tout sur Opus</span><strong>${usd(data.baseline_cost)}</strong></div>
       <div class="bars" style="margin:10px 0">
-        <div class="bar routed" title="Aiguilleur"><span style="width:${(100 * routedCost) / max}%"></span></div>
+        <div class="bar routed" title="ThinkLess"><span style="width:${(100 * routedCost) / max}%"></span></div>
         <div class="bar base" title="Tout sur Opus"><span style="width:${(100 * data.baseline_cost) / max}%"></span></div>
       </div>
       <div class="savings">${savings > 0 ? `−${savings} %` : `+${-savings} %`}</div>
@@ -146,15 +146,8 @@ async function ask(answers) {
     $("#trace").insertAdjacentHTML("beforeend", data.steps.map((s) => stepHtml(s, data.complexity)).join(""));
 
     if (data.status === "needs_answers") {
-      state.questions = data.questions;
       state.questionCost = data.total_cost;
-      $("#questions").innerHTML = data.questions
-        .map((q, i) => `<div class="question"><label for="q${i}">${escapeHtml(q)}</label><input type="text" id="q${i}" required></div>`)
-        .join("");
-      $("#questions-card").hidden = false;
-      $("#answer-card").hidden = true;
-      $("#totals").hidden = true;
-      $("#q0")?.focus();
+      showQuestions(data.questions);
       return;
     }
 
@@ -174,21 +167,75 @@ async function ask(answers) {
   }
 }
 
+/* Advisor mode: ask ThinkLess which model to use, without generating an answer. */
+async function advise(answers) {
+  $("#error").hidden = true;
+  setBusy(true, "ThinkLess analyse la demande…");
+  try {
+    const res = await fetch("/api/route", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request: state.request, answers }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail?.[0]?.msg || data.detail || `Erreur ${res.status}`);
+    setBusy(false);
+
+    if (!answers) $("#trace").innerHTML = "";
+    $("#trace").insertAdjacentHTML("beforeend", stepHtml(data.triage_step, null));
+
+    if (data.status === "needs_answers") {
+      showQuestions(data.questions);
+      return;
+    }
+    $("#questions-card").hidden = true;
+    const rec = data.recommendation;
+    $("#advice-badge").className = `badge ${rec.tier}`;
+    $("#advice-badge").textContent = TIER_NAMES[rec.tier] || rec.tier;
+    $("#advice-model").textContent = rec.model;
+    $("#advice-effort").textContent = rec.effort;
+    $("#advice-reason").textContent = data.reason || "";
+    $("#advice-json").textContent = JSON.stringify(data, null, 2);
+    $("#advice-card").hidden = false;
+  } catch (err) {
+    setBusy(false);
+    $("#error").textContent = err.message;
+    $("#error").hidden = false;
+  }
+}
+
+function showQuestions(questions) {
+  state.questions = questions;
+  $("#questions").innerHTML = questions
+    .map((q, i) => `<div class="question"><label for="q${i}">${escapeHtml(q)}</label><input type="text" id="q${i}" required></div>`)
+    .join("");
+  $("#questions-card").hidden = false;
+  $("#q0")?.focus();
+}
+
+function hideResults() {
+  ["#questions-card", "#answer-card", "#advice-card", "#totals"].forEach((id) => ($(id).hidden = true));
+}
+
 $("#ask-form").addEventListener("submit", (e) => {
   e.preventDefault();
   state.request = $("#request").value.trim();
   if (!state.request) return;
   state.questionCost = 0;
-  $("#questions-card").hidden = true;
-  $("#answer-card").hidden = true;
-  $("#totals").hidden = true;
-  ask(null);
+  hideResults();
+  $("#advisor").checked ? advise(null) : ask(null);
 });
 
 $("#questions-card").addEventListener("submit", (e) => {
   e.preventDefault();
   const answers = state.questions.map((q, i) => ({ question: q, answer: $(`#q${i}`).value.trim() }));
-  ask(answers);
+  $("#advisor").checked ? advise(answers) : ask(answers);
+});
+
+// The comparison only makes sense when an answer is generated.
+$("#advisor").addEventListener("change", () => {
+  $("#compare").disabled = $("#advisor").checked;
+  if ($("#advisor").checked) $("#compare").checked = false;
 });
 
 $("#request").addEventListener("keydown", (e) => {
@@ -213,7 +260,7 @@ async function loadBenchmark() {
     <div class="card kpi"><div class="label">Qualité moyenne</div><div class="value">${String(s.routed_quality).replace(".", ",")}/10</div><div class="sub">Opus seul : ${String(s.baseline_quality).replace(".", ",")}/10</div></div>
     <div class="card kpi"><div class="label">Niveau attendu trouvé</div><div class="value">${s.tier_match}/${s.tasks}</div><div class="sub">tâches classées comme prévu</div></div>
     <div class="card kpi"><div class="label">Tâches testées</div><div class="value">${s.tasks}</div><div class="sub">notées à l'aveugle par ${escapeHtml(s.judge_model)}</div></div>`;
-  $("#bench-note").textContent = "Vert : aiguilleur · Rouge : tout sur Opus";
+  $("#bench-note").textContent = "Vert : ThinkLess · Rouge : tout sur Opus";
 
   const max = Math.max(...data.rows.map((r) => Math.max(r.routed_cost, r.baseline_cost)));
   $("#bench-rows").innerHTML = data.rows

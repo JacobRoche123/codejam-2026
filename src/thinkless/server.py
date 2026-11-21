@@ -1,6 +1,7 @@
 """FastAPI server: JSON API for the router plus the static demo page."""
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import anthropic
@@ -32,7 +33,7 @@ class AskIn(BaseModel):
 
 def create_app(llm: LLM | None = None) -> FastAPI:
     load_dotenv(ROOT / ".env.local")
-    app = FastAPI(title="Aiguilleur")
+    app = FastAPI(title="ThinkLess")
     state: dict[str, Router] = {}
 
     def router() -> Router:
@@ -51,8 +52,20 @@ def create_app(llm: LLM | None = None) -> FastAPI:
     @app.post("/api/ask")
     def ask(body: AskIn) -> dict:
         answers = [QA(a.question, a.answer) for a in body.answers] if body.answers else None
+        return run_safely(
+            lambda: router().ask(body.request, answers, compare_baseline=body.compare).to_dict()
+        )
+
+    @app.post("/api/route")
+    def route(body: AskIn) -> dict:
+        """Advisor mode: returns which model and effort to use, without answering."""
+        answers = [QA(a.question, a.answer) for a in body.answers] if body.answers else None
+        return run_safely(lambda: router().route(body.request, answers))
+
+    def run_safely(action: Callable[[], dict]) -> dict:
+        """Runs a router call and turns API errors into clear French messages."""
         try:
-            outcome = router().ask(body.request, answers, compare_baseline=body.compare)
+            return action()
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
         except anthropic.AuthenticationError as exc:
@@ -63,7 +76,6 @@ def create_app(llm: LLM | None = None) -> FastAPI:
             raise HTTPException(502, f"Erreur de l'API Claude ({exc.status_code}).") from exc
         except anthropic.APIConnectionError as exc:
             raise HTTPException(503, "Impossible de joindre l'API Claude.") from exc
-        return outcome.to_dict()
 
     @app.get("/api/benchmark")
     def benchmark() -> dict:

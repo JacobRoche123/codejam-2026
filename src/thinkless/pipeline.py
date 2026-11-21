@@ -117,6 +117,37 @@ class Router:
         self.llm = llm
         self.cache: dict[str, Outcome] = {}
 
+    def route(self, request: str, answers: list[QA] | None = None) -> dict[str, Any]:
+        """Advisor mode: triage only. Says which model and effort to use, never answers."""
+        request = request.strip()
+        if not request:
+            raise ValueError("La demande est vide.")
+
+        verdict = triage(self.llm, request, answers)
+        detail = (
+            f"{len(verdict.questions)} question(s) à poser d'abord."
+            if verdict.needs_answers
+            else "Conseil seulement : aucune réponse générée."
+        )
+        step = Step.from_call("triage", "Triage de la demande", TRIAGE, verdict.call, detail)
+        result: dict[str, Any] = {
+            "status": "needs_answers" if verdict.needs_answers else "route",
+            "questions": verdict.questions,
+            "reason": verdict.reason,
+            "triage_cost": step.cost_usd,
+            "triage_step": asdict(step),
+        }
+        if not verdict.needs_answers:
+            tier = TIERS[verdict.complexity]
+            result["recommendation"] = {
+                "tier": tier.name,
+                "model": tier.model,
+                "effort": tier.effort,
+                "label": tier.label,
+            }
+            result["brief"] = verdict.brief
+        return result
+
     def ask(
         self,
         request: str,

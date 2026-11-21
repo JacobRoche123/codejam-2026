@@ -120,6 +120,10 @@ textarea:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 
 .chip:hover { border-color: var(--accent); }
 
 .check { display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; }
+.checks { display: flex; flex-direction: column; gap: 4px; }
+.advice-main { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 16px; }
+details { margin-top: 8px; }
+details pre { background: var(--surface); border: 1px solid var(--border); padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 12px; }
 
 button.primary {
   border: 0; background: var(--accent); color: #fff;

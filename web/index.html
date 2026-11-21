@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Aiguilleur</title>
+  <title>ThinkLess</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="brand">
       <span class="logo" aria-hidden="true">⑂</span>
       <div>
-        <h1>Aiguilleur</h1>
+        <h1>ThinkLess</h1>
         <p class="tagline">Avant de réfléchir, il demande. Puis il choisit le plus petit modèle qui suffit.</p>
       </div>
     </div>
@@ -38,7 +38,10 @@
               <button type="button" class="chip" data-example="Écris-moi un script pour trier mes fichiers.">Ambiguë</button>
             </div>
             <div class="row">
-              <label class="check"><input type="checkbox" id="compare"> Comparer avec « tout sur Opus »</label>
+              <div class="checks">
+                <label class="check"><input type="checkbox" id="compare"> Comparer avec « tout sur Opus »</label>
+                <label class="check"><input type="checkbox" id="advisor"> Mode conseiller (dit quel modèle utiliser, sans répondre)</label>
+              </div>
               <button type="submit" class="primary" id="send">Envoyer</button>
             </div>
           </form>
@@ -57,6 +60,19 @@
             </div>
             <p id="reason" class="muted small"></p>
             <div id="answer" class="answer"></div>
+          </div>
+
+          <div id="advice-card" class="card accent" hidden>
+            <div class="card-title">Conseil de ThinkLess à ton agent</div>
+            <div class="advice-main">
+              <span id="advice-badge" class="badge"></span>
+              <span>Utilise <code id="advice-model"></code> avec l'effort <strong id="advice-effort"></strong></span>
+            </div>
+            <p id="advice-reason" class="muted small"></p>
+            <details>
+              <summary class="small">Réponse JSON envoyée à l'agent</summary>
+              <pre id="advice-json"></pre>
+            </details>
           </div>
 
           <div id="error" class="card error" hidden></div>
@@ -78,7 +94,7 @@
     <section id="tab-bench" class="panel">
       <div id="bench-empty" class="card" hidden>
         <div class="card-title">Pas encore de résultats</div>
-        <p class="muted">Lance <code>uv run python bench/run.py</code> pour comparer l'aiguilleur à « tout sur Opus ».</p>
+        <p class="muted">Lance <code>uv run python bench/run.py</code> pour comparer ThinkLess à « tout sur Opus ».</p>
       </div>
       <div id="bench" hidden>
         <div class="kpis" id="kpis"></div>
