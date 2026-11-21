@@ -1,197 +1,243 @@
 # ThinkLess
 
-*Version française · [English version](README.en.md)*
+**Ask before thinking. Then use the smallest model that does the job.**
 
-**Avant de réfléchir, il demande. Puis il choisit le plus petit modèle qui suffit.**
+ThinkLess is a router that sits in front of an AI assistant. For every request it decides, for a fraction of a cent, whether the request is clear enough to answer and how much model it really needs, so simple questions stop being answered by the most expensive model.
 
-ThinkLess est un aiguilleur placé devant un assistant IA. Pour chaque demande, il décide, pour une fraction de cent, si la demande est assez claire pour y répondre et quelle taille de modèle elle mérite vraiment. Les questions simples ne sont plus traitées par le modèle le plus cher.
-
-Construit en 24 heures à **CodeJam 16** (Université McGill, novembre 2026) pour le défi **Agent Solution** : utiliser le calcul efficacement, avec une démo qui montre *comment* l'agent décide, et pas seulement ce qu'il produit.
+Built in 24 hours at **CodeJam 16** (McGill University, November 2026) for the **Agent Solution** track: efficient use of compute, with a demo that shows *how* the agent decides, not just what it produces.
 
 ---
 
-## Le problème
+## The problem
 
-La plupart des applications d'IA envoient toutes les demandes à leur modèle le plus puissant. « Quelle est la capitale de l'Australie ? » et « Conçois un système de covoiturage pour 50 000 utilisateurs » reçoivent le même traitement et la même facture. En plus, un assistant qui comprend mal une demande vague gaspille une réponse coûteuse tout entière.
+Most AI apps send every request to their strongest model. "What is the capital of Australia?" and "Design a ride-sharing system for 50,000 users" get the same treatment and the same bill. On top of that, an assistant that misunderstands a vague request wastes a whole expensive answer.
 
-## Pourquoi c'est important
+## Why it matters
 
-Chaque jeton qu'un modèle génère passe par des milliards de paramètres sur un processeur graphique (GPU). Réduire ce travail permet d'économiser quatre choses à la fois :
+Every token a model generates runs through billions of parameters on a GPU. Doing less of that work saves four things at once.
 
-| Ressource | Comment ThinkLess l'économise |
-|---|---|
-| **Calcul et énergie** | Un petit modèle fait moins de calculs par jeton, et moins de jetons, c'est moins de calcul au total. La recherche sur l'IA montre que l'énergie consommée dépend de la taille du modèle et du nombre de jetons générés ([Luccioni et al., *Power Hungry Processing*, ACM FAccT 2024](https://arxiv.org/abs/2311.16863)). |
-| **Jetons** | Mesuré : 27 % de jetons en moins que « tout sur Opus », et des jetons 40 fois moins chers quand Haiku suffit. |
-| **Crédits (argent)** | Mesuré : une facture 60 % plus basse sur notre banc d'essai. Une question déjà posée ne coûte rien. |
-| **Temps** | Les petits modèles répondent plus vite, et une question de clarification évite de refaire une mauvaise réponse. |
+```mermaid
+flowchart LR
+    A["Smaller model<br/>when it is enough"] --> C["Less GPU compute"]
+    B["Fewer tokens<br/>(−27 % measured)"] --> C
+    K["Cache hit<br/>(no model call)"] --> C
+    C --> E["⚡ Less energy<br/>and emissions"]
+    C --> M["💳 Lower bill<br/>(−60 % measured)"]
+    C --> T["⏱ Faster answers"]
+```
 
-**L'impact écologique, en toute honnêteté.** Moins de calcul, c'est moins d'électricité et moins d'émissions. Mais Anthropic ne publie pas la consommation d'énergie par requête : on ne peut donc pas convertir nos économies en watts-heures ou en grammes de CO₂ sans inventer des chiffres. On présente ce qu'on peut mesurer (les jetons et le coût) comme indicateur du calcul.
+- **Compute and energy.** Smaller models do less computation per token, and fewer tokens means less computation overall. Research on AI inference shows energy use depends on model size and on how many tokens are generated ([Luccioni et al., *Power Hungry Processing*, ACM FAccT 2024](https://arxiv.org/abs/2311.16863)).
+- **Tokens.** Measured: 27 % fewer tokens than sending everything to Opus, and tokens 40× cheaper whenever Haiku is enough.
+- **Credits.** Measured: a 60 % lower bill on our benchmark. A question that was already answered costs nothing.
+- **Time.** Small models answer faster, and a clarifying question avoids redoing a wrong answer.
 
-## Comment fonctionne ThinkLess
+**Ecological impact, stated honestly.** Less compute means less electricity and fewer emissions, but Anthropic does not publish energy figures per request, so we cannot convert our savings into watt-hours or grams of CO₂ without inventing numbers. We report what we can measure (tokens and cost) and treat it as the proxy for compute.
+
+## How ThinkLess works
 
 ```mermaid
 flowchart TD
-    A[Demande de l'utilisateur] --> B{Déjà vue ?}
-    B -- identique --> Z[Réponse réutilisée · 0 $]
-    B -- "≥ 75 % similaire" --> C{Haiku : même réponse ?}
-    C -- oui --> Z
-    C -- non --> D
-    B -- nouvelle --> D[Triage · Haiku 5.5]
-    D -- ambiguë --> Q[Au plus 3 questions, une seule fois]
+    A[User request] --> B{Seen before?}
+    B -- identical --> Z["Reuse earlier answer · $0"]
+    B -- "≥ 75 % similar" --> C{"Haiku: same answer needed?"}
+    C -- yes --> Z
+    C -- no --> D
+    B -- new --> D["Triage · Haiku 5.5"]
+    D -- ambiguous --> Q["Ask up to 3 questions, once"]
     Q --> D
-    D -- simple --> H[Haiku 5.5 · effort low]
-    D -- moyenne --> S[Sonnet 5.5 · effort medium]
-    D -- complexe --> O[Opus 5.5 · effort high]
+    D -- simple --> H["Haiku 5.5 · effort low"]
+    D -- medium --> S["Sonnet 5.5 · effort medium"]
+    D -- complex --> O["Opus 5.5 · effort high"]
 ```
 
-1. **Cache.** Une question identique est gratuite. Une question similaire (ressemblance du texte ≥ 75 %) est vérifiée par Haiku avant d'être réutilisée : « capitale de la France » et « capitale de l'Allemagne » se ressemblent à 87 %, mais n'ont pas la même réponse.
-2. **Triage.** Claude Haiku 5.5 lit la demande et rend un verdict structuré : manque-t-il une information essentielle, quelle est la difficulté, et un court brief pour le modèle qui répondra.
-3. **Clarification.** Si une information manquante changerait la réponse, ThinkLess pose au plus 3 questions courtes, une seule fois. Une question coûte une fraction de cent ; une mauvaise réponse coûteuse coûte l'appel entier.
-4. **Aiguillage.** Le plus petit modèle suffisant répond, avec la demande originale (qui a toujours le dernier mot) et le brief du triage.
-5. **Mesure.** Chaque étape enregistre les vrais nombres de jetons renvoyés par l'API, et son coût.
+1. **Cache.** An identical question is free. A similar one (text similarity ≥ 75 %) is checked by Haiku before reuse: "capital of France" and "capital of Germany" look 87 % alike but need different answers.
+2. **Triage.** Claude Haiku 5.5 reads the request and returns a structured verdict: is anything essential missing, how hard is it, and a short brief for the model that will answer.
+3. **Clarify.** If a missing detail would change the answer, ThinkLess asks at most 3 short questions, once. A question costs a fraction of a cent; a wrong expensive answer costs the whole call.
+4. **Route.** The smallest sufficient model answers, with the original request (which always wins) plus the triage brief.
+5. **Measure.** Every step records real token counts from the API and its cost.
 
-Le triage est fait par un modèle d'IA, pas par des règles à mots-clés, parce qu'il comprend le sens. Les limites strictes (au plus 3 questions, un seul tour, un niveau inconnu devient « moyenne ») sont appliquées en Python : une consigne donnée à une IA est une demande, pas une garantie.
+The triage is an LLM, not keyword rules, because it understands meaning. Hard limits (max 3 questions, one round only, unknown tiers fall back to medium) are enforced in Python, because a prompt is a request, not a guarantee.
 
-## Trois façons de l'utiliser
+## Three ways to use it
 
-| Mode | Ce qu'il fait | Point d'entrée |
+```mermaid
+flowchart LR
+    U1["You, in a browser"] --> W["Demo app<br/>uv run thinkless"]
+    U2["Any program"] --> R["Advisor API<br/>POST /api/route"]
+    U3["An AI agent<br/>(Claude Code…)"] --> M["MCP tool<br/>choose_model"]
+    W --> T(("ThinkLess<br/>triage"))
+    R --> T
+    M --> T
+    T --> W2["Answer + every decision,<br/>tokens, cost, time"]
+    T --> R2["Recommended model<br/>and effort, no answer"]
+```
+
+| Mode | What it does | Entry point |
 |---|---|---|
-| **Application de démo** | Répond à la demande et affiche chaque décision, son modèle, ses jetons, son coût et son temps, à côté de « tout sur Opus » | `uv run thinkless` → http://127.0.0.1:8000 |
-| **API conseiller** | Renvoie le modèle et l'effort recommandés, sans répondre | `POST /api/route` |
-| **Outil MCP** | Se branche dans Claude Code, Claude Desktop ou tout agent MCP, sous la forme d'un outil `choose_model` | `uv run thinkless-mcp` |
+| **Demo app** | Answers the request and shows every decision, its model, tokens, cost and time, next to "everything on Opus" | `uv run thinkless` → http://127.0.0.1:8000 |
+| **Advisor API** | Returns the recommended model and effort, without answering | `POST /api/route` |
+| **MCP tool** | Plugs into Claude Code, Claude Desktop or any MCP agent as a `choose_model` tool | `uv run thinkless-mcp` |
 
 ---
 
-## Résultats
+## Results
 
-Tous les chiffres ci-dessous sont **mesurés** sur de vrais appels : les nombres de jetons viennent de l'API Claude, et les prix sont les tarifs publiés par Anthropic. Les données brutes sont dans [`bench/`](bench/).
+All numbers below are **measured** from real API calls: token counts come from the Claude API, prices are Anthropic's published rates. Raw data is in [`bench/`](bench/).
 
-### ThinkLess contre « tout sur Opus 5.5 » (20 tâches)
+### Router vs. "everything on Opus 5.5" (20 tasks)
 
-| | ThinkLess | Opus 5.5 pour tout |
+```mermaid
+xychart-beta
+    title "Billed cost on 20 tasks (USD)"
+    x-axis ["ThinkLess", "Opus for everything"]
+    y-axis "USD" 0 --> 1
+    bar [0.335, 0.845]
+```
+
+| | ThinkLess | Opus 5.5 for everything |
 |---|---|---|
-| Coût facturé | **0,335 $** | 0,845 $ |
-| Jetons | **31 988** | 43 618 |
-| Qualité (notée sur 10) | **8,0** | 8,8 |
+| Billed cost | **$0.335** | $0.845 |
+| Tokens | **31,988** | 43,618 |
+| Quality (judged /10) | **8.0** | 8.8 |
 
-**60 % de calcul facturé en moins, en gardant 91 % de la qualité d'Opus.**
+**60 % less billed compute, keeping 91 % of Opus's quality.**
 
-Comment la qualité est notée : Claude Sonnet 5.5 note les deux réponses à l'aveugle, **deux fois, en inversant leur ordre**, et on fait la moyenne pour annuler le biais de position et le hasard. Les 20 tâches mélangent faits simples, code, explications, preuves, conception de systèmes et 2 demandes ambiguës ([`bench/tasks.json`](bench/tasks.json)).
+How quality is judged: Claude Sonnet 5.5 grades both answers blind, **twice, with the order swapped**, and we average the scores to cancel position bias and noise. The 20 tasks mix simple facts, code, explanations, proofs, system design and 2 ambiguous requests ([`bench/tasks.json`](bench/tasks.json)).
 
-Nous avons itéré trois fois, en corrigeant ce que le banc d'essai révélait :
+We iterated three times, fixing what the benchmark revealed:
 
-| Version | Changement | Économie | Qualité vs Opus |
+```mermaid
+flowchart LR
+    V1["v1 · first run<br/>−64 % cost<br/>quality 7.7 vs 8.5"] --> V2["v2 · executor sees the original request,<br/>judge runs twice<br/>−62 % · 7.8 vs 8.75 (89 %)"]
+    V2 --> V3["v3 · stricter triage<br/>(code, rare facts → Sonnet)<br/>−60 % · 8.0 vs 8.8 (91 %)"]
+```
+
+### Thinking effort vs. model choice
+
+Same model (Sonnet 5.5), same 6 tasks, three effort levels. Thinking tokens are billed as output, so fewer tokens means less compute.
+
+```mermaid
+xychart-beta
+    title "Average output tokens by effort (Sonnet 5.5)"
+    x-axis ["low", "medium", "high"]
+    y-axis "tokens" 0 --> 1200
+    bar [963, 967, 1110]
+```
+
+| Effort | Avg output tokens | vs. high | Quality vs. high |
 |---|---|---|---|
-| v1 | premier essai, un seul passage du juge | 64 % | 7,7 vs 8,5 |
-| v2 | le modèle qui répond voit toujours la demande originale ; le juge note deux fois | 62 % | 7,8 vs 8,75 (89 %) |
-| v3 | triage plus strict : le code, les faits rares et les tâches où un détail compte vont à Sonnet | **60 %** | **8,0 vs 8,8 (91 %)** |
+| low | 963 | 87 % | 7.5 vs 8.4 |
+| medium | 967 | 87 % | 8.1 vs 8.6 |
+| high | 1,110 | 100 % | reference |
 
-### Effort de réflexion contre choix du modèle
+**Lowering effort saves about 13 % of tokens. Switching from Opus to Haiku cuts the price per token by 40×.** Choosing the right model is the main lever, which is why ThinkLess routes between models first.
 
-Même modèle (Sonnet 5.5), mêmes 6 tâches, trois niveaux d'effort. Les jetons de réflexion sont facturés comme des jetons de sortie : moins de jetons, c'est moins de calcul.
+### What we did not measure
 
-| Effort | Jetons de sortie (moy.) | vs high | Qualité vs high |
-|---|---|---|---|
-| low | 963 | 87 % | 7,5 vs 8,4 |
-| medium | 967 | 87 % | 8,1 vs 8,6 |
-| high | 1 110 | 100 % | référence |
-
-**Baisser l'effort n'économise qu'environ 13 % des jetons. Passer d'Opus à Haiku divise le prix par jeton par 40.** Le choix du modèle est le levier principal : c'est pourquoi ThinkLess choisit d'abord le bon modèle.
-
-### Ce que nous n'avons pas mesuré
-
-- **L'énergie.** Anthropic ne publie pas la consommation par requête, donc nous n'affichons pas de watts-heures. Nous utilisons les jetons et le coût facturés comme indicateur mesurable du calcul : un modèle plus gros coûte plus cher par jeton parce qu'il fait plus de calculs par jeton.
-- **Des tâches jamais vues.** Les règles du triage ont été ajustées sur les mêmes 20 tâches que celles qui servent à les noter : les chiffres sont peut-être un peu optimistes. Un nouveau jeu de tâches est la prochaine chose à ajouter.
+- **Energy.** Anthropic does not publish per-request energy use, so we show no watt-hours. We use billed tokens and cost as the measurable proxy for compute: a bigger model costs more per token because it uses more compute per token.
+- **A held-out test set.** The triage rules were tuned on the same 20 tasks they are scored on, so the numbers may be slightly optimistic. A fresh task set is the next thing to add.
 
 ---
 
-## Limites
+## Limits
 
-- **Un conseil, pas un contrôle.** En mode conseiller et en mode MCP, ThinkLess recommande un modèle, mais un agent ne peut pas changer son propre modèle en pleine conversation. Le conseil est utile là où l'agent peut confier le travail à un autre modèle, par exemple à un sous-agent.
-- **Les faits rares demandent un gros modèle.** Ni Haiku ni Sonnet ne savaient ce qu'est l'ECSESS de McGill ; seul Opus le savait. Le triage ne peut pas toujours deviner qu'un fait « simple » est en réalité peu connu.
-- **La prudence a un coût.** En cas de doute, le triage choisit le niveau supérieur. Cela protège la qualité, mais dépense parfois trop, par exemple en envoyant une preuve classique à Opus.
-- **Le triage peut ignorer ses propres règles.** Il a pour consigne de classer « moyenne » toute réponse de plus d'une ligne de code, et il dit parfois quand même « simple ».
-- **Le cache par ressemblance vit en mémoire** (il s'efface au redémarrage) et rate les reformulations qui partagent peu de mots (« Où siège le gouvernement australien ? »).
+- **Advice, not control.** In the MCP and advisor modes, ThinkLess recommends a model; an agent cannot switch its own model mid-conversation. The advice pays off where the agent can delegate work, for example to a subagent.
+- **Rare facts need big models.** Neither Haiku nor Sonnet knew what McGill's ECSESS is; only Opus did. Triage cannot always tell when a "simple" fact is actually obscure.
+- **Prudence costs.** When unsure, triage picks the higher tier. That protects quality but sometimes overspends, for example sending a classic proof to Opus.
+- **The triage can ignore its own rules.** It is instructed that answers with more than one line of code are "medium", and it sometimes still says "simple".
+- **The similarity cache lives in memory** and misses paraphrases that share few words ("Where does Australia's government sit?").
 
 ---
 
-## Installation pas à pas
+## Step-by-step setup
 
-ThinkLess n'est pas un modèle : c'est un petit programme qui choisit entre des modèles Claude. Il s'exécute sur ton ordinateur. Testé sur macOS ; Linux devrait fonctionner de la même façon.
+ThinkLess is not a model: it is a small program that chooses between Claude models. You run it on your computer. Tested on macOS; Linux should work the same way.
 
-**1. Installer uv** (il installe la bonne version de Python et les bibliothèques à ta place) :
+```mermaid
+flowchart TD
+    S1["1 · Install uv"] --> S2["2 · Get an Anthropic API key"]
+    S2 --> S3["3 · Download the project"]
+    S3 --> S4["4 · Save the key in .env.local"]
+    S4 --> S5["5 · Run the demo app"]
+    S5 --> S6["6 · Optional: plug into Claude Code (MCP)"]
+    S5 --> S7["7 · Optional: call the advisor API"]
+```
+
+**1. Install uv** (it installs the right Python version and the libraries for you):
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Sur un Mac avec Homebrew, `brew install uv` fonctionne aussi. Ouvre ensuite un nouveau Terminal.
+On a Mac with Homebrew, `brew install uv` works too. Open a new terminal afterwards.
 
-**2. Obtenir une clé API Anthropic.** Crée-la sur [console.anthropic.com](https://console.anthropic.com/) (Settings → API Keys). L'API est facturée à l'usage, séparément d'un abonnement Claude Pro ; essayer la démo coûte quelques cents.
+**2. Get an Anthropic API key.** Create one at [console.anthropic.com](https://console.anthropic.com/) (Settings → API Keys). The API is billed by usage, separately from a Claude Pro subscription; trying the demo costs a few cents.
 
-**3. Télécharger le projet :**
+**3. Download the project:**
 
 ```bash
 git clone https://github.com/JacobRoche123/codejam-2026.git
 cd codejam-2026
 ```
 
-**4. Enregistrer ta clé** dans un fichier nommé `.env.local`. Cette commande demande la clé sans l'afficher à l'écran ; le fichier est listé dans `.gitignore`, il n'est donc jamais publié :
+**4. Save your key** in a file named `.env.local`. This command asks for the key without showing it on screen; the file is listed in `.gitignore`, so it is never published:
 
 ```bash
-read -s "K?Colle ta clé API Anthropic : " && printf 'ANTHROPIC_API_KEY=%s\n' "$K" > .env.local && chmod 600 .env.local && unset K
+read -s "K?Paste your Anthropic API key: " && printf 'ANTHROPIC_API_KEY=%s\n' "$K" > .env.local && chmod 600 .env.local && unset K
 ```
 
-(C'est la syntaxe de zsh, le shell par défaut de macOS. Avec bash, remplace le début par `read -s -p "Colle ta clé : " K`.)
+(That is zsh, the default shell on macOS. In bash, use `read -s -p "Paste your key: " K` for the first part.)
 
-**5. Lancer l'application de démo**, puis ouvrir http://127.0.0.1:8000 :
+**5. Start the demo app** and open http://127.0.0.1:8000:
 
 ```bash
 uv run thinkless
 ```
 
-Clique sur l'exemple « Simple », coche « Comparer avec « tout sur Opus » » et appuie sur « Envoyer ». La colonne de droite affiche chaque décision, son modèle, ses jetons et son coût. Pour arrêter le serveur : `Ctrl+C`.
+Click the "Simple" example, tick "Comparer avec « tout sur Opus »" and press "Envoyer". The right column shows each decision, its model, tokens and cost. Stop the server with `Ctrl+C`.
 
-**6. (Facultatif) Brancher ThinkLess dans Claude Code** comme outil MCP. Remplace le chemin par l'endroit où tu as téléchargé le projet :
+**6. (Optional) Plug ThinkLess into Claude Code** as an MCP tool. Replace the path with where you cloned the project:
 
 ```bash
-claude mcp add thinkless --scope user -- uv --directory /chemin/vers/codejam-2026 run thinkless-mcp
+claude mcp add thinkless --scope user -- uv --directory /path/to/codejam-2026 run thinkless-mcp
 ```
 
-Vérifie avec `claude mcp list` (tu dois voir `thinkless ... ✔ Connected`). Lance ensuite `claude` et demande par exemple : *« Utilise l'outil choose_model de thinkless pour : démontre que racine de 2 est irrationnel. »* Le serveur de démo n'a pas besoin de tourner : Claude Code démarre ThinkLess lui-même.
+Check it with `claude mcp list` (you should see `thinkless ... ✔ Connected`). Then start `claude` and ask, for example: *"Use the thinkless choose_model tool for: prove that √2 is irrational."* The demo server does not need to be running for this; Claude Code starts ThinkLess itself.
 
-**7. (Facultatif) Interroger le conseiller en HTTP**, comme n'importe quel programme pourrait le faire (le serveur de l'étape 5 doit tourner) :
+**7. (Optional) Ask the advisor over HTTP**, like any program could (needs the server from step 5):
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/route \
   -H "Content-Type: application/json" \
-  -d '{"request": "Traduis bonjour en espagnol"}'
+  -d '{"request": "Translate hello into Spanish"}'
 ```
 
-## Quels agents peuvent l'utiliser ?
+## Which agents can use it?
 
-ThinkLess parle le [Model Context Protocol](https://modelcontextprotocol.io/) (MCP), le standard ouvert que de nombreux agents IA utilisent pour brancher des outils. Pour l'instant, il fonctionne comme un serveur MCP **local** : l'agent le démarre sur ton ordinateur et lui parle par stdio.
+ThinkLess speaks the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP), the open standard many AI agents use to plug in tools. It currently runs as a **local** MCP server: the agent starts it on your computer and talks to it over stdio.
 
-| Agent | Serveurs MCP locaux | ThinkLess aujourd'hui |
-|---|---|---|
-| Claude Code | oui | **Testé, fonctionne** |
-| Claude Desktop, Cursor, VS Code (mode agent de Copilot), Gemini CLI | oui | Devrait fonctionner avec la même commande ; **non testé** |
-| ChatGPT (application web) | surtout des serveurs distants | **Pas encore** : il faudrait héberger ThinkLess en ligne, en HTTP, avec une authentification |
+```mermaid
+flowchart LR
+    T["ThinkLess<br/>local MCP server (stdio)"]
+    T --> A1["✅ Claude Code<br/>tested, works"]
+    T --> A2["🟡 Claude Desktop · Cursor ·<br/>VS Code (Copilot) · Gemini CLI<br/>same protocol, not tested"]
+    T -.-> A3["❌ ChatGPT web app<br/>needs a hosted HTTP version<br/>with authentication"]
+```
 
-Deux réserves pour les agents qui ne sont pas Claude :
+Two caveats for non-Claude agents:
 
-- Le conseil nomme des modèles **Claude**. Dans un autre écosystème, il faudrait faire correspondre les trois niveaux (simple, moyenne, complexe) aux petit, moyen et grand modèles de ce fournisseur.
-- Le triage appelle toujours Claude Haiku : une clé API Anthropic est nécessaire, quel que soit l'agent.
+- The advice names **Claude** models. In another ecosystem, the three tiers (simple, medium, complex) would need mapping to that provider's small, medium and large models.
+- The triage itself always calls Claude Haiku, so an Anthropic API key is required whatever the agent.
 
-## Tests et bancs d'essai
+## Tests and benchmarks
 
-Lancer les tests (hors ligne, gratuits, avec un faux modèle) :
+Run the tests (offline, free, with a fake model):
 
 ```bash
 uv run pytest -q          # 26 tests
 ```
 
-Reproduire les bancs d'essai (vrais appels à l'API, environ 1,60 $ et 0,80 $) :
+Reproduce the benchmarks (real API calls, about $1.60 and $0.80):
 
 ```bash
 uv run python bench/run.py
@@ -200,21 +246,36 @@ cd bench && uv run python effort.py
 
 ## Architecture
 
-| Fichier | Rôle |
-|---|---|
-| [`src/thinkless/config.py`](src/thinkless/config.py) | Niveaux de modèles, prix publiés, seuils, formule de coût |
-| [`src/thinkless/llm.py`](src/thinkless/llm.py) | Le seul fichier qui appelle l'API Claude (remplaçable par un faux dans les tests) |
-| [`src/thinkless/triage.py`](src/thinkless/triage.py) | Consignes du triage, schéma de réponse structurée, garde-fous en Python |
-| [`src/thinkless/cache.py`](src/thinkless/cache.py) | Ressemblance des textes + confirmation par Haiku |
-| [`src/thinkless/pipeline.py`](src/thinkless/pipeline.py) | `Router.ask` (réponse complète) et `Router.route` (conseil seulement), avec la trace de chaque étape |
-| [`src/thinkless/server.py`](src/thinkless/server.py) | FastAPI : `/api/ask`, `/api/route`, `/api/benchmark` |
-| [`src/thinkless/mcp_server.py`](src/thinkless/mcp_server.py) | Serveur MCP qui expose `choose_model` |
-| [`web/`](web/) | Page de démo : trace en direct, onglet banc d'essai, fonctionnement |
-| [`bench/`](bench/) | Tâches, scripts de banc d'essai et résultats bruts |
-| [`tests/`](tests/) | 26 tests hors ligne |
+```mermaid
+flowchart TD
+    UI["web/ · demo page"] -->|HTTP| SV["server.py<br/>/api/ask · /api/route"]
+    AG["AI agent"] -->|MCP stdio| MC["mcp_server.py<br/>choose_model"]
+    SV --> PL["pipeline.py<br/>Router.ask · Router.route"]
+    MC --> PL
+    PL --> CA["cache.py<br/>similarity + Haiku check"]
+    PL --> TR["triage.py<br/>prompt, schema, guardrails"]
+    PL --> CF["config.py<br/>tiers, prices, cost"]
+    CA --> LL["llm.py<br/>only file that calls the API"]
+    TR --> LL
+    PL --> LL
+    LL --> API(("Claude API"))
+```
 
-**Technologies :** Python 3.12, SDK Python d'Anthropic, FastAPI, SDK Python MCP, HTML/CSS/JS sans framework. Modèles : Claude Haiku 5.5, Sonnet 5.5 et Opus 5.5.
+| File | Role |
+|---|---|
+| [`src/thinkless/config.py`](src/thinkless/config.py) | Model tiers, published prices, thresholds, cost formula |
+| [`src/thinkless/llm.py`](src/thinkless/llm.py) | The only file that calls the Claude API (swappable for a fake in tests) |
+| [`src/thinkless/triage.py`](src/thinkless/triage.py) | Triage prompt, structured-output schema, Python guardrails |
+| [`src/thinkless/cache.py`](src/thinkless/cache.py) | Text similarity + Haiku confirmation |
+| [`src/thinkless/pipeline.py`](src/thinkless/pipeline.py) | `Router.ask` (full answer) and `Router.route` (advice only), with per-step tracing |
+| [`src/thinkless/server.py`](src/thinkless/server.py) | FastAPI: `/api/ask`, `/api/route`, `/api/benchmark` |
+| [`src/thinkless/mcp_server.py`](src/thinkless/mcp_server.py) | MCP server exposing `choose_model` |
+| [`web/`](web/) | Demo page: live trace, benchmark tab, how-it-works |
+| [`bench/`](bench/) | Tasks, benchmark scripts and raw results |
+| [`tests/`](tests/) | 26 offline tests |
+
+**Stack:** Python 3.12, Anthropic Python SDK, FastAPI, MCP Python SDK, vanilla HTML/CSS/JS. Models: Claude Haiku 5.5, Sonnet 5.5 and Opus 5.5.
 
 ---
 
-Construit par Jacob Roche à CodeJam 16, avec Claude Code comme partenaire de programmation.
+Built by Jacob Roche at CodeJam 16, with Claude Code as a pair programmer.
