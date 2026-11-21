@@ -12,6 +12,19 @@ Built in 24 hours at **CodeJam 16** (McGill University, November 2026) for the *
 
 Most AI apps send every request to their strongest model. "What is the capital of Australia?" and "Design a ride-sharing system for 50,000 users" get the same treatment and the same bill. On top of that, an assistant that misunderstands a vague request wastes a whole expensive answer.
 
+## Why it matters
+
+Every token a model generates runs through billions of parameters on a GPU. Less of that work saves four things at once:
+
+| Resource | How ThinkLess saves it |
+|---|---|
+| **Compute and energy** | Smaller models do less computation per token, and fewer tokens means less computation overall. Research on AI inference shows energy use depends on model size and on how many tokens are generated ([Luccioni et al., *Power Hungry Processing*, ACM FAccT 2024](https://arxiv.org/abs/2311.16863)). |
+| **Tokens** | Measured: 27 % fewer tokens than sending everything to Opus, and 40× cheaper tokens whenever Haiku is enough. |
+| **Credits (money)** | Measured: 60 % lower bill on our benchmark. A question that was already answered costs nothing. |
+| **Time** | Small models answer faster, and a clarifying question avoids redoing a wrong answer. |
+
+**Ecological impact, stated honestly.** Less compute means less electricity and fewer emissions, but Anthropic does not publish energy figures per request, so we cannot convert our savings into watt-hours or grams of CO₂ without inventing numbers. We report what we can measure (tokens and cost) and treat it as the proxy for compute.
+
 ## How ThinkLess works
 
 ```mermaid
@@ -100,18 +113,52 @@ Same model (Sonnet 5.5), same 6 tasks, three effort levels. Thinking tokens are 
 
 ---
 
-## Run it
+## Step-by-step setup
 
-Requirements: macOS or Linux, [uv](https://docs.astral.sh/uv/), and an Anthropic API key.
+ThinkLess is not a model: it is a small program that chooses between Claude models. You run it on your computer. Tested on macOS; Linux should work the same way.
+
+**1. Install uv** (it installs the right Python version and the libraries for you):
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+On a Mac with Homebrew, `brew install uv` works too. Open a new terminal afterwards.
+
+**2. Get an Anthropic API key.** Create one at [console.anthropic.com](https://console.anthropic.com/) (Settings → API Keys). The API is billed by usage, separately from a Claude Pro subscription; trying the demo costs a few cents.
+
+**3. Download the project:**
 
 ```bash
 git clone https://github.com/JacobRoche123/codejam-2026.git
 cd codejam-2026
-echo 'ANTHROPIC_API_KEY=sk-ant-...' > .env.local   # never committed (.gitignore)
-uv run thinkless                                   # then open http://127.0.0.1:8000
 ```
 
-Ask the advisor directly, like an agent would:
+**4. Save your key** in a file named `.env.local`. This command asks for the key without showing it on screen; the file is listed in `.gitignore`, so it is never published:
+
+```bash
+read -s "K?Paste your Anthropic API key: " && printf 'ANTHROPIC_API_KEY=%s\n' "$K" > .env.local && chmod 600 .env.local && unset K
+```
+
+(That is zsh, the default shell on macOS. In bash, use `read -s -p "Paste your key: " K` for the first part.)
+
+**5. Start the demo app** and open http://127.0.0.1:8000:
+
+```bash
+uv run thinkless
+```
+
+Click the "Simple" example, tick "Comparer avec « tout sur Opus »" and press "Envoyer". The right column shows each decision, its model, tokens and cost. Stop the server with `Ctrl+C`.
+
+**6. (Optional) Plug ThinkLess into Claude Code** as an MCP tool. Replace the path with where you cloned the project:
+
+```bash
+claude mcp add thinkless --scope user -- uv --directory /path/to/codejam-2026 run thinkless-mcp
+```
+
+Check it with `claude mcp list` (you should see `thinkless ... ✔ Connected`). Then start `claude` and ask, for example: *"Use the thinkless choose_model tool for: prove that √2 is irrational."* The demo server does not need to be running for this; Claude Code starts ThinkLess itself.
+
+**7. (Optional) Ask the advisor over HTTP**, like any program could (needs the server from step 5):
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/route \
@@ -119,11 +166,22 @@ curl -s -X POST http://127.0.0.1:8000/api/route \
   -d '{"request": "Translate hello into Spanish"}'
 ```
 
-Plug it into Claude Code as an MCP tool:
+## Which agents can use it?
 
-```bash
-claude mcp add thinkless --scope user -- uv --directory /path/to/codejam-2026 run thinkless-mcp
-```
+ThinkLess speaks the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP), the open standard many AI agents use to plug in tools. It currently runs as a **local** MCP server (the agent starts it on your computer, over stdio).
+
+| Agent | Local MCP servers | ThinkLess today |
+|---|---|---|
+| Claude Code | yes | **Tested, works** |
+| Claude Desktop, Cursor, VS Code (Copilot agent mode), Gemini CLI | yes | Should work with the same command; **not tested** |
+| ChatGPT (web app) | mostly remote servers | **Not yet**: would need ThinkLess hosted online over HTTP, with authentication |
+
+Two caveats for non-Claude agents:
+
+- The advice names **Claude** models. In another ecosystem, the three tiers (simple, medium, complex) would need mapping to that provider's small, medium and large models.
+- The triage itself always calls Claude Haiku, so an Anthropic API key is required whatever the agent.
+
+## Tests and benchmarks
 
 Run the tests (offline, free, with a fake model):
 
