@@ -78,6 +78,43 @@ flowchart LR
 | **Advisor API** | Returns the recommended model and effort, without answering | `POST /api/route` |
 | **MCP tool** | Plugs into Claude Code, Claude Desktop or any MCP agent as a `choose_model` tool | `uv run thinkless-mcp` |
 
+## Install ThinkLess as an advisor tool (one command)
+
+Anyone can add ThinkLess to their AI agent. It shows up as **"ThinkLess advisor"**, a read-only tool: it recommends a model and an effort level, and never answers or changes anything. No need to download the project.
+
+You need [uv](https://docs.astral.sh/uv/) (`brew install uv`, or see step 1 below) and your own [Anthropic API key](https://console.anthropic.com/): each piece of advice is one Claude Haiku call, about 0.02 cents, billed to your key.
+
+```mermaid
+flowchart LR
+    U["Your agent<br/>(Claude Code, Cursor…)"] -->|"choose_model('prove √2 is irrational')"| T["ThinkLess advisor<br/>(runs on your computer)"]
+    T -->|"one Haiku call<br/>with your key"| H(("Claude API"))
+    T -->|"model: claude-opus-5-5<br/>effort: high<br/>reason: …"| U
+```
+
+**Claude Code** (tested):
+
+```bash
+claude mcp add thinkless --scope user -e ANTHROPIC_API_KEY=sk-ant-your-key -- uvx --from git+https://github.com/JacobRoche123/codejam-2026 thinkless-mcp
+```
+
+Check with `claude mcp list`, then ask Claude: *"Use the thinkless choose_model tool for: prove that √2 is irrational."*
+
+**Claude Desktop, Cursor, Gemini CLI and other MCP clients** (same protocol, not tested): add this block to the client's MCP settings file (`claude_desktop_config.json`, `~/.cursor/mcp.json` or `~/.gemini/settings.json`), then restart the app:
+
+```json
+{
+  "mcpServers": {
+    "thinkless": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/JacobRoche123/codejam-2026", "thinkless-mcp"],
+      "env": { "ANTHROPIC_API_KEY": "sk-ant-your-key" }
+    }
+  }
+}
+```
+
+If a desktop app cannot find `uvx`, replace `"uvx"` with its full path (run `which uvx` in a terminal). If the key is missing or wrong, the tool tells the agent how to fix it.
+
 ---
 
 ## Results
@@ -196,7 +233,7 @@ uv run thinkless
 
 Click the "Simple" example, tick "Compare with everything on Opus" and press "Send". The right column shows each decision, its model, tokens and cost. Stop the server with `Ctrl+C`.
 
-**6. (Optional) Plug ThinkLess into Claude Code** as an MCP tool. Replace the path with where you cloned the project:
+**6. (Optional) Plug your local copy into Claude Code** as an MCP tool (to use the published version instead, see [Install ThinkLess as an advisor tool](#install-thinkless-as-an-advisor-tool-one-command)). Replace the path with where you cloned the project:
 
 ```bash
 claude mcp add thinkless --scope user -- uv --directory /path/to/codejam-2026 run thinkless-mcp

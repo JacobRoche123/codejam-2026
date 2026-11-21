@@ -77,6 +77,10 @@ def create_app(llm: LLM | None = None) -> FastAPI:
             raise HTTPException(502, f"Claude API error ({exc.status_code}).") from exc
         except anthropic.APIConnectionError as exc:
             raise HTTPException(503, "Cannot reach the Claude API.") from exc
+        except TypeError as exc:  # no key at all: the SDK cannot build the request
+            if "authentication" not in str(exc):
+                raise
+            raise HTTPException(502, "No API key found: create .env.local (see README, step 4).") from exc
 
     @app.get("/api/benchmark")
     def benchmark() -> dict:
