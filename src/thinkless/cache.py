@@ -16,7 +16,7 @@ from .llm import LLM, LLMResult
 CONFIRM_SYSTEM = """You compare two user requests sent to an assistant.
 Answer same=true only if one correct answer would fully and correctly answer both requests.
 Any difference in the subject, the language, a number, a name or a constraint means same=false.
-Give a short reason in the language of the requests."""
+Give a short reason in English, in one sentence."""
 
 CONFIRM_SCHEMA = {
     "type": "object",
