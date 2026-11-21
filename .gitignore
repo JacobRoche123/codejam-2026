@@ -8,3 +8,6 @@ __pycache__/
 dist/
 build/
 .DS_Store
+
+# Benchmark logs (results are kept as JSON)
+*.log
