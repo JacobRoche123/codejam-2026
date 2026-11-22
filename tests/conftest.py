@@ -35,3 +35,15 @@ def verdict(clarity="clear", questions=None, complexity="simple", reason="ok", b
 @pytest.fixture
 def make_llm():
     return FakeLLM
+
+
+@pytest.fixture(autouse=True)
+def isolated_files(monkeypatch, tmp_path):
+    """Every test gets its own empty cache and no real API key, whatever is on this machine."""
+    from thinkless import llm, memory
+
+    monkeypatch.setattr(memory, "CACHE_FILE", tmp_path / "cache.json")
+    monkeypatch.setattr(llm, "KEY_FILE", tmp_path / "no_key")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("THINKLESS_ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("THINKLESS_HOOK", raising=False)

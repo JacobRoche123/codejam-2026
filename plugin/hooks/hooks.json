@@ -1,7 +1,18 @@
 {
-  "description": "ThinkLess: triage each prompt and tell Claude which subagent (small, medium, large) should do the work.",
+  "description": "ThinkLess: offer cached answers and, with an API key, name the Claude model each prompt needs (UserPromptSubmit); store each finished exchange in the cache (Stop).",
   "hooks": {
     "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uvx --from git+https://github.com/JacobRoche123/codejam-2026 thinkless-hook",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
       {
         "hooks": [
           {

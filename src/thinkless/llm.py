@@ -52,8 +52,10 @@ def resolve_api_key() -> str | None:
     for name in ("ANTHROPIC_API_KEY", "THINKLESS_ANTHROPIC_API_KEY"):
         if os.environ.get(name, "").strip():
             return os.environ[name].strip()
-    if KEY_FILE.is_file():
-        return KEY_FILE.read_text().strip() or None
+    # THINKLESS_KEY_FILE points elsewhere (for tests, or to simulate a user without a key).
+    key_file = Path(os.environ.get("THINKLESS_KEY_FILE") or KEY_FILE)
+    if key_file.is_file():
+        return key_file.read_text().strip() or None
     return None
 
 

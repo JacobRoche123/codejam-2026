@@ -1,8 +1,9 @@
-"""Claude Code hook: triage every prompt automatically, before Claude reads it.
+"""Claude Code hook: runs before Claude reads each prompt.
 
 Claude Code runs this program on each UserPromptSubmit event, sends the event as JSON on
-stdin ({"prompt": "...", ...}), and adds whatever we print to stdout to Claude's context.
-The advice tells Claude which ThinkLess subagent (small/medium/large) should do the work.
+stdin ({"prompt": "...", "transcript_path": "...", "cwd": "...", ...}), and adds whatever we
+print to stdout to Claude's context. It offers a cached answer when the same question was
+already answered, and, with an API key, names the Claude model and subagent to use.
 
 Rules of the hook contract we rely on:
 - exit 0 → our stdout becomes context; any other non-2 exit is a non-blocking error;
@@ -15,8 +16,9 @@ import os
 import sys
 from typing import Any
 
+from . import memory
 from .config import TIERS
-from .llm import LLM, AnthropicLLM
+from .llm import LLM, AnthropicLLM, resolve_api_key
 from .pipeline import Router
 
 # The subagent that runs each tier, as defined in plugin/agents/*.md. Claude Code prefixes
@@ -82,11 +84,35 @@ def format_advice(advice: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def update_cache(event: dict[str, Any]) -> None:
+    """Stores the previous question and its answer from this session's transcript."""
+    transcript = event.get("transcript_path")
+    if not transcript:
+        return
+    exchange = memory.last_exchange(transcript)
+    if exchange and not should_skip(exchange[0]):
+        memory.remember(exchange[0], exchange[1], event.get("cwd", ""))
+
+
 def run(event: dict[str, Any], llm: LLM | None = None) -> str:
-    """Returns the context to add for one hook event ('' = add nothing)."""
+    """Returns the context to add for one hook event ('' = add nothing).
+
+    1. Cache: free, no key needed. A similar earlier question goes to the lead agent.
+    2. Triage: only with an API key (precise mode). Without one, the ThinkLess Router
+       agent triages the request itself, inside the Claude subscription.
+    """
     prompt = event.get("prompt", "")
     if should_skip(prompt):
         return ""
+    try:
+        update_cache(event)
+        hit = memory.lookup(prompt, event.get("cwd", ""))
+    except OSError:  # an unreadable transcript or cache file must never block the prompt
+        hit = None
+    if hit:
+        return memory.format_hit(*hit)
+    if llm is None and resolve_api_key() is None:
+        return ""  # no key: the router agent does the triage itself
     advice = Router(llm or AnthropicLLM()).route(prompt)
     return format_advice(advice)
 
@@ -94,6 +120,11 @@ def run(event: dict[str, Any], llm: LLM | None = None) -> str:
 def main() -> None:
     try:
         event = json.load(sys.stdin)
+        if event.get("hook_event_name") == "Stop":
+            # Claude just finished answering: store this exchange now, so even the last
+            # question of a session can be reused later. Prints nothing.
+            update_cache(event)
+            return
         output = run(event)
     except Exception as exc:  # never break the user's prompt: report and let Claude continue
         print(f"ThinkLess hook skipped: {type(exc).__name__}: {exc}", file=sys.stderr)

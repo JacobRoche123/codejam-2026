@@ -65,6 +65,7 @@ def test_ambiguous_prompt_asks_questions_first():
 
 
 def test_main_prints_advice_for_claude_code(monkeypatch, capsys):
+    monkeypatch.setattr(hook, "resolve_api_key", lambda: "sk-test")  # precise mode needs a key
     monkeypatch.setattr(hook, "AnthropicLLM", lambda: FakeLLM([verdict(complexity="medium")]))
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"prompt": "Explain how HTTPS works"})))
     hook.main()

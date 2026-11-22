@@ -19,6 +19,7 @@ dependencies = [
 thinkless = "thinkless:main"
 thinkless-mcp = "thinkless.mcp_server:main"
 thinkless-hook = "thinkless.hook:main"
+thinkless-savings = "thinkless.savings:main"
 
 [build-system]
 requires = ["uv_build>=0.13.9,<0.14.0"]
