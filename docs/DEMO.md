@@ -72,11 +72,11 @@ Spoken text is in quotes. Actions are in **bold**. About 500 spoken words: 4 min
 
 **Paste the CSV request and press Return.**
 
-"A hook triages my message automatically. It's medium difficulty, so the lead **delegates** it to a Sonnet worker. Look: `thinkless:medium`. Haiku didn't do the work, and Opus was never called."
+"A hook triages my message automatically. ThinkLess says this needs Claude Sonnet 5.5, so the lead **delegates** it. Look: `thinkless:sonnet`. Haiku didn't do the work, and Opus was never called."
 
 **While it runs (about 15 seconds):**
 
-"For a hard task, like designing a system, it goes to Opus: `thinkless:large`. For a simple one, Haiku answers alone for three tenths of a cent. A cheap lead, and the big models only when the task deserves it."
+"For a hard task, like designing a system, it goes to Opus: `thinkless:opus`. For a simple one, Haiku answers alone for three tenths of a cent. A cheap lead, and the big models only when the task deserves it."
 
 **Point at the result when it arrives.**
 
@@ -95,7 +95,7 @@ Cut demo 2 (vague request) and shorten the numbers to one sentence: "60 % less c
 ## Plan B (no internet, or the API is slow)
 
 - The **Benchmark** tab works offline: it reads local results. Tell the story with the numbers.
-- Show screenshots of Claude Code delegating to `thinkless:medium` and `thinkless:large`.
+- Show screenshots of Claude Code delegating to `thinkless:sonnet` and `thinkless:opus`.
 - Best: record the whole demo as a video beforehand (Devpost usually asks for one) and play it if the live demo fails.
 
 ---

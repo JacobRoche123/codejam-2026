@@ -2,7 +2,9 @@
 
 **Ask before thinking. Then use the smallest model that does the job.**
 
-ThinkLess is a router that sits in front of an AI assistant. For every request it decides, for a fraction of a cent, whether the request is clear enough to answer and how much model it really needs, so simple questions stop being answered by the most expensive model.
+ThinkLess is a router that sits in front of an AI assistant. For every request it decides, for a fraction of a cent, whether the request is clear enough to answer and which Claude model it really needs: **Claude Haiku 5.5**, **Sonnet 5.5**, **Opus 5.5**, or, rarely, **Fable 5.2**. Simple questions stop being answered by the most expensive model.
+
+> **Just want to use it?** Read **[THINKLESS.md](THINKLESS.md)**: what it is in one paragraph, and how to install it in Claude Code.
 
 Built in 24 hours at **CodeJam 16** (McGill University, November 2026) for the **Agent Solution** track: efficient use of compute, with a demo that shows *how* the agent decides, not just what it produces.
 
@@ -45,65 +47,82 @@ flowchart TD
     B -- new --> D["Triage · Haiku 5.5"]
     D -- ambiguous --> Q["Ask up to 3 questions, once"]
     Q --> D
-    D -- simple --> H["Haiku 5.5 · effort low"]
-    D -- medium --> S["Sonnet 5.5 · effort medium"]
-    D -- complex --> O["Opus 5.5 · effort high"]
+    D -- simple --> H["Claude Haiku 5.5 · effort low"]
+    D -- medium --> S["Claude Sonnet 5.5 · effort medium"]
+    D -- complex --> O["Claude Opus 5.5 · effort high"]
+    D -. "expert (rare)" .-> F["Claude Fable 5.2 · effort high"]
 ```
 
 1. **Cache.** An identical question is free. A similar one (text similarity ≥ 75 %) is checked by Haiku before reuse: "capital of France" and "capital of Germany" look 87 % alike but need different answers.
 2. **Triage.** Claude Haiku 5.5 reads the request and returns a structured verdict: is anything essential missing, how hard is it, and a short brief for the model that will answer.
 3. **Clarify.** If a missing detail would change the answer, ThinkLess asks at most 3 short questions, once. A question costs a fraction of a cent; a wrong expensive answer costs the whole call.
-4. **Route.** The smallest sufficient model answers, with the original request (which always wins) plus the triage brief.
+4. **Route.** The smallest sufficient model answers, with the original request (which always wins) plus the triage brief. Claude Fable 5.2, twice the price of Opus, is reserved for frontier-level work such as research-level proofs; textbook proofs and usual system design stay on Opus.
 5. **Measure.** Every step records real token counts from the API and its cost.
 
 The triage is an LLM, not keyword rules, because it understands meaning. Hard limits (max 3 questions, one round only, unknown tiers fall back to medium) are enforced in Python, because a prompt is a request, not a guarantee.
 
-## Three ways to use it
+## Ways to use it
 
 ```mermaid
 flowchart LR
-    U1["You, in a browser"] --> W["Demo app<br/>uv run thinkless"]
+    U0["You, in Claude Code"] --> P["Claude Code plugin<br/>automatic, every prompt"]
+    U1["You, in a browser"] --> W["Demo app and<br/>Savings report"]
     U2["Any program"] --> R["Advisor API<br/>POST /api/route"]
-    U3["An AI agent<br/>(Claude Code…)"] --> M["MCP tool<br/>choose_model"]
-    W --> T(("ThinkLess<br/>triage"))
+    U3["Another AI agent"] --> M["MCP tool<br/>choose_model"]
+    P --> T(("ThinkLess<br/>triage"))
+    W --> T
     R --> T
     M --> T
-    T --> W2["Answer + every decision,<br/>tokens, cost, time"]
+    T --> P2["Work delegated to<br/>Haiku · Sonnet · Opus · Fable"]
+    T --> W2["Answer, cost, tokens, time,<br/>quality vs Opus"]
     T --> R2["Recommended model<br/>and effort, no answer"]
 ```
 
 | Mode | What it does | Entry point |
 |---|---|---|
+| **Claude Code plugin** | Routes **every** prompt automatically: a Haiku lead delegates the work to a Claude Sonnet 5.5, Opus 5.5 or Fable 5.2 subagent when the task deserves it. Nothing to type | `claude plugin install thinkless@thinkless` |
+| **Savings report** | Paste a prompt: ThinkLess and Opus 5.5 both answer it, a judge grades both blind, and the page shows money, tokens and time saved, quality kept, and both answers side by side | Demo app, "Savings report" tab |
 | **Demo app** | Answers the request and shows every decision, its model, tokens, cost and time, next to "everything on Opus" | `uv run thinkless` → http://127.0.0.1:8000 |
 | **Advisor API** | Returns the recommended model and effort, without answering; accepts your own list of models | `POST /api/route` |
-| **MCP tool** | Plugs into Claude Code, Claude Desktop or any MCP agent as a `choose_model` tool, for any model family | `uv run thinkless-mcp` |
-| **Claude Code plugin** | Routes **every** prompt automatically and delegates the work to a Haiku, Sonnet or Opus subagent: nothing to type | `claude plugin install thinkless@thinkless` |
+| **MCP tool** | Plugs into Claude Code or any MCP agent as a `choose_model` tool, for any model family | `uv run thinkless-mcp` |
 
 ## ThinkLess acts: automatic routing in Claude Code
 
-With the plugin, ThinkLess is no longer an advisor you have to call: it runs on **every prompt** (a `UserPromptSubmit` hook) and the session's lead agent, **ThinkLess Router** (on Haiku), **delegates** the work to the subagent ThinkLess picked. Only hard tasks climb to Sonnet or Opus.
+With the plugin, ThinkLess is no longer an advisor you have to call: it runs on **every prompt** (a `UserPromptSubmit` hook), names the Claude model the task needs, and the session's lead agent, **ThinkLess Router** (on Claude Haiku 5.5), **delegates** the work to that model. Only hard tasks climb to Sonnet, Opus or Fable.
 
 ```mermaid
 flowchart TD
     U["You type a request<br/>in Claude Code"] --> H["🪝 ThinkLess hook<br/>(automatic, every prompt)"]
-    H -->|"triage · Haiku · ~0.02 ¢"| V{Difficulty}
-    V -- simple --> L["Lead agent thinkless:router<br/>(Haiku) answers directly"]
-    V -- medium --> M["Subagent thinkless:medium<br/>Sonnet · effort medium"]
-    V -- complex --> O["Subagent thinkless:large<br/>Opus · effort high"]
+    H -->|"triage · Haiku · ~0.02 ¢"| V{"Model needed"}
+    V -- "Claude Haiku 5.5" --> L["Lead agent thinkless:router<br/>answers directly"]
+    V -- "Claude Sonnet 5.5" --> M["Subagent thinkless:sonnet<br/>effort medium"]
+    V -- "Claude Opus 5.5" --> O["Subagent thinkless:opus<br/>effort high"]
+    V -. "Claude Fable 5.2 (rare)" .-> F["Subagent thinkless:fable<br/>effort high"]
     V -- ambiguous --> Q["Lead asks the user<br/>clarifying questions"]
 ```
 
-**Measured in real Claude Code runs** (lead model Haiku, plugin loaded, Nov 2026; one run each, costs from Claude Code's own usage report):
+What Claude sees before it answers, for example:
+
+```text
+[ThinkLess advice · triage by Claude Haiku · cost 0.022 ¢]
+Model: Claude Opus 5.5 · effort high (difficulty: complex).
+Reason: System design with real trade-offs at a meaningful scale requires a strong model.
+Required action: use Claude Opus 5.5. Your first step must be an Agent tool call with subagent_type "thinkless:opus" ...
+```
+
+**Measured in real Claude Code runs** (lead model Haiku, plugin loaded, Nov 2026; one run each, costs from Claude Code's own usage report; the subagents were then named by size, now by model):
 
 | Prompt | ThinkLess decision | Models used | Cost |
 |---|---|---|---|
-| "What is the capital of Australia?" | simple | Haiku only | $0.003 |
-| "Write a Python function that reads a CSV of expenses…" | medium → `thinkless:medium` | Haiku $0.004 + Sonnet $0.079 | $0.083 |
-| "Design the architecture of a ride-sharing app for 50,000 students…" | complex → `thinkless:large` | Haiku $0.005 + Opus $0.204 | $0.210 |
+| "What is the capital of Australia?" | Claude Haiku 5.5 | Haiku only | $0.003 |
+| "Write a Python function that reads a CSV of expenses…" | Claude Sonnet 5.5 → `thinkless:sonnet` | Haiku $0.004 + Sonnet $0.079 | $0.083 |
+| "Design the architecture of a ride-sharing app for 50,000 students…" | Claude Opus 5.5 → `thinkless:opus` | Haiku $0.005 + Opus $0.204 | $0.210 |
+
+The Fable tier was checked on routing only: a research-level request ("a new approach to bound the gaps between consecutive primes, with proof sketches") was sent to Claude Fable 5.2, while "prove that √2 is irrational" stayed on Opus 5.5.
 
 For comparison, Claude Code running on Opus spent $0.11 to $0.13 on a five-bullet summary of the causes of the French Revolution, a task ThinkLess classified as simple in one run and medium in another (the triage is not perfectly consistent). These are single runs, not a benchmark: the [API benchmark](#results) is the controlled measurement.
 
-**Why a dedicated lead agent.** With a plain Haiku session, the advice arrives as a note next to the prompt, and the lead sometimes ignores it: in an interactive test, Haiku received "medium → delegate to thinkless:medium" and wrote the code itself. Running the session as the `thinkless:router` agent puts the routing rule in the lead's **system prompt**, where it carries more weight. With the router, 5 out of 5 runs were routed as advised: 3 medium tasks went to Sonnet ($0.036 to $0.090 each), 1 complex task to Opus, and 1 simple question stayed on Haiku ($0.003).
+**Why a dedicated lead agent.** With a plain Haiku session, the advice arrives as a note next to the prompt, and the lead sometimes ignores it: in an interactive test, Haiku received "delegate to the Sonnet subagent" and wrote the code itself. Running the session as the `thinkless:router` agent puts the routing rule in the lead's **system prompt**, where it carries more weight. With the router, 5 out of 5 runs were routed as advised: 3 medium tasks went to Sonnet ($0.036 to $0.090 each), 1 complex task to Opus, and 1 simple question stayed on Haiku ($0.003).
 
 **Install (Claude Code):**
 
@@ -130,7 +149,29 @@ For comparison, Claude Code running on Opus spent $0.11 to $0.13 on a five-bulle
 
 Turn the hook off for one session with `THINKLESS_HOOK=off claude`. Slash commands and replies under three words are never triaged. The hook runs in every Claude Code session once the plugin is enabled; to keep it only for the sessions you choose, disable the plugin (`claude plugin disable thinkless@thinkless`) and load it per session with `--plugin-dir`.
 
-**Limits.** Delegation still depends on the lead model following its instructions: reliable with the router in our runs, not with a plain session (see above). The hook only sees the current message, not the conversation, so a short follow-up such as "step 6 problem" can be misjudged. Each subagent call carries Claude Code's own context, so a medium task costs more than in the raw API benchmark. The triage adds about 2 to 3 seconds per prompt.
+**Limits.** Delegation still depends on the lead model following its instructions: reliable with the router in our runs, not with a plain session (see above). The hook only sees the current message, not the conversation, so a short follow-up such as "step 6 problem" can be misjudged. Each subagent call carries Claude Code's own context, so a medium task costs more than in the raw API benchmark. The triage adds about 2 to 3 seconds per prompt. Fable 5.2 costs twice as much as Opus 5.5: if the triage chose it too often, ThinkLess would spend more, which is why its rule is strict.
+
+## Savings report: what did ThinkLess save on my prompt?
+
+The demo app has a **Savings report** tab. Paste any prompt you sent to Claude:
+
+```mermaid
+flowchart LR
+    P["Your prompt"] --> T["ThinkLess<br/>triage + chosen model"]
+    P --> O["Claude Opus 5.5 alone<br/>(in parallel)"]
+    T --> J{"Blind judge<br/>Sonnet 5.5, both orders"}
+    O --> J
+    J --> R["Report: money, tokens, time saved,<br/>quality kept, both answers"]
+```
+
+Two real reports (one run each, Nov 2026):
+
+| Prompt | Model chosen | Cost vs Opus alone | Tokens | Quality (judge) | Time |
+|---|---|---|---|---|---|
+| Python function for a CSV of expenses | Claude Sonnet 5.5 | 0.68 ¢ vs 3.08 ¢ (**−78 %**) | −33 % | 8/10 vs 8/10 | 6.4 s vs 13.3 s |
+| Translate a sentence into Spanish and Italian | Claude Haiku 5.5 | 0.01 ¢ vs 0.38 ¢ (**−97 %**) | +54 % | 10/10 vs 10/10 | 2.6 s vs 1.9 s |
+
+On tiny prompts the triage adds tokens and about a second, but they are Haiku tokens, 40× cheaper than Opus output tokens. The judge's cost (about 0.4 ¢) is shown separately: it measures the saving and is not part of it.
 
 ## Install ThinkLess as an advisor tool (one command)
 
@@ -175,7 +216,7 @@ If a desktop app cannot find `uvx`, replace `"uvx"` with its full path (run `whi
 
 ## Results
 
-All numbers below are **measured** from real API calls: token counts come from the Claude API, prices are Anthropic's published rates. Raw data is in [`bench/`](bench/).
+All numbers below are **measured** from real API calls: token counts come from the Claude API, prices are Anthropic's published rates. Raw data is in [`bench/`](bench/). The benchmark was run before the Fable 5.2 tier existed (three tiers: Haiku, Sonnet, Opus), and its costs used a flat 10 % cache-read rate, since replaced by published cache prices; cache reads are a small share of these runs.
 
 ### Router vs. "everything on Opus 5.5" (20 tasks)
 
@@ -236,7 +277,8 @@ xychart-beta
 
 - **Advice, not control.** In the MCP and advisor modes, ThinkLess recommends a model; an agent cannot switch its own model mid-conversation. The advice pays off where the agent can delegate work, for example to a subagent.
 - **Rare facts need big models.** Neither Haiku nor Sonnet knew what McGill's ECSESS is; only Opus did. Triage cannot always tell when a "simple" fact is actually obscure.
-- **Prudence costs.** When unsure, triage picks the higher tier. That protects quality but sometimes overspends, for example sending a classic proof to Opus.
+- **Prudence costs.** When unsure, triage picks the higher tier (never Fable by default). That protects quality but sometimes overspends, for example sending a classic proof to Opus.
+- **Fable 5.2 is routed, not benchmarked.** We checked which requests reach it, not the quality or savings of its answers.
 - **The triage can ignore its own rules.** It is instructed that answers with more than one line of code are "medium", and it sometimes still says "simple".
 - **The similarity cache lives in memory** and misses paraphrases that share few words ("Where does Australia's government sit?").
 
@@ -348,7 +390,7 @@ The MCP tool takes the same optional `available_models` argument, and its descri
 Run the tests (offline, free, with a fake model):
 
 ```bash
-uv run pytest -q          # 54 tests
+uv run pytest -q          # 67 tests
 ```
 
 Reproduce the benchmarks (real API calls, about $1.60 and $0.80):
@@ -384,11 +426,13 @@ flowchart TD
 | [`src/thinkless/pipeline.py`](src/thinkless/pipeline.py) | `Router.ask` (full answer) and `Router.route` (advice only), with per-step tracing |
 | [`src/thinkless/server.py`](src/thinkless/server.py) | FastAPI: `/api/ask`, `/api/route`, `/api/benchmark` |
 | [`src/thinkless/mcp_server.py`](src/thinkless/mcp_server.py) | MCP server exposing `choose_model` |
+| [`src/thinkless/report.py`](src/thinkless/report.py) | Savings report: ThinkLess vs Opus 5.5 on one prompt |
+| [`src/thinkless/judge.py`](src/thinkless/judge.py) | Blind judge (both orders), shared by the report and the benchmark |
 | [`src/thinkless/hook.py`](src/thinkless/hook.py) | Claude Code hook: triages every prompt and tells Claude which subagent to use |
-| [`plugin/`](plugin/) | Claude Code plugin: the hook, the MCP server, the `router` lead agent and the `small`, `medium`, `large` subagents |
+| [`plugin/`](plugin/) | Claude Code plugin: the hook, the MCP server, the `router` lead agent and the `haiku`, `sonnet`, `opus`, `fable` subagents |
 | [`web/`](web/) | Demo page: live trace, benchmark tab, how-it-works |
 | [`bench/`](bench/) | Tasks, benchmark scripts and raw results |
-| [`tests/`](tests/) | 54 offline tests |
+| [`tests/`](tests/) | 67 offline tests |
 
 **Stack:** Python 3.12, Anthropic Python SDK, FastAPI, MCP Python SDK, vanilla HTML/CSS/JS. Models: Claude Haiku 5.5, Sonnet 5.5 and Opus 5.5.
 
