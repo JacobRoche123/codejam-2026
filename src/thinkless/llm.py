@@ -1,7 +1,9 @@
 """Thin wrapper around the Anthropic SDK so the router can be tested offline."""
 
+import os
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol
 
 import anthropic
@@ -34,11 +36,33 @@ class LLM(Protocol):
     ) -> LLMResult: ...
 
 
+KEY_FILE = Path.home() / ".config" / "thinkless" / "api_key"
+
+
+def resolve_api_key() -> str | None:
+    """Finds ThinkLess's API key, first match wins.
+
+    1. ANTHROPIC_API_KEY: set by `claude mcp add -e ...` for the MCP server only, or by .env.local.
+    2. THINKLESS_ANTHROPIC_API_KEY: a ThinkLess-only variable.
+    3. ~/.config/thinkless/api_key: a private file, used by the Claude Code plugin.
+
+    We never ask users to export ANTHROPIC_API_KEY in their shell: Claude Code itself would
+    pick it up and switch from their subscription to API billing.
+    """
+    for name in ("ANTHROPIC_API_KEY", "THINKLESS_ANTHROPIC_API_KEY"):
+        if os.environ.get(name, "").strip():
+            return os.environ[name].strip()
+    if KEY_FILE.is_file():
+        return KEY_FILE.read_text().strip() or None
+    return None
+
+
 class AnthropicLLM:
-    """Calls the Claude API. Reads ANTHROPIC_API_KEY from the environment."""
+    """Calls the Claude API with the key found by resolve_api_key()."""
 
     def __init__(self, client: anthropic.Anthropic | None = None):
-        self.client = client or anthropic.Anthropic()
+        # api_key=None keeps the SDK's own lookup, so a missing key fails on the first call.
+        self.client = client or anthropic.Anthropic(api_key=resolve_api_key())
 
     def complete(
         self,

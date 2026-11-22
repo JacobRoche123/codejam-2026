@@ -1,0 +1,16 @@
+{
+  "description": "ThinkLess: triage each prompt and tell Claude which subagent (small, medium, large) should do the work.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uvx --from git+https://github.com/JacobRoche123/codejam-2026 thinkless-hook",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

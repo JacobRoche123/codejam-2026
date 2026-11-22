@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "thinkless": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/JacobRoche123/codejam-2026", "thinkless-mcp"]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "thinkless",
+  "description": "ThinkLess: ask before thinking, then use the smallest model that does the job.",
+  "owner": { "name": "Jacob Roche" },
+  "plugins": [
+    {
+      "name": "thinkless",
+      "source": "./plugin",
+      "description": "Automatic triage of every prompt (hook), delegation to Haiku/Sonnet/Opus subagents, and the choose_model MCP tool."
+    }
+  ]
+}
