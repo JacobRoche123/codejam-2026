@@ -42,6 +42,8 @@ ThinkLess is a router that sits in front of an AI assistant. For every request i
 
 It works three ways: a demo web app that shows every decision, an advisor API that returns only the recommended model, and an **MCP tool** that plugs into AI agents like Claude Code, so an agent can ask ThinkLess which model to use before it starts working. It is not tied to Claude: an agent can send its own models, ordered from smallest to largest, and ThinkLess picks one of them, so the advice works for any model family. Anyone can install it in one command.
 
+**ThinkLess also acts.** As a Claude Code plugin, it triages **every** prompt automatically (no command to type), and a cheap lead agent on Haiku delegates the work to a Sonnet or Opus worker only when the task deserves it. In live runs, a simple question stayed on Haiku for $0.003, a coding task went to Sonnet, and a system-design task went to Opus.
+
 **Measured on 20 tasks, graded blind:** 60 % less billed compute and 27 % fewer tokens than sending everything to Opus, while keeping 91 % of its quality.
 
 ## How I built it
@@ -51,6 +53,7 @@ It works three ways: a demo web app that shows every decision, an advisor API th
 - **Guardrails in Python** on top of the prompt: at most 3 questions, a single round, safe defaults. A prompt is a request; code is a guarantee.
 - **A similarity cache** built in two layers: free text similarity with Python's `difflib`, then a Haiku check only when the texts look close.
 - **The MCP Python SDK** to expose ThinkLess as a tool that agents can call.
+- **A Claude Code plugin**: a `UserPromptSubmit` hook that triages each prompt, three worker subagents (Haiku, Sonnet, Opus, each with its own effort level), and a lead agent, ThinkLess Router, whose system prompt is the routing rule. Installable from the public GitHub repo in two commands.
 - **A benchmark** of 20 tasks: each runs through ThinkLess and through Opus alone, and Claude Sonnet grades both answers blind, twice with the order swapped. A second benchmark compares thinking-effort levels.
 - **54 offline tests** with a fake model, so the logic is checked for free in under a second.
 
@@ -62,13 +65,15 @@ I built it with Claude Code as a pair programmer, and used it as a teacher too: 
 - **The judge was noisy.** The same answer scored 4/10 once and 8/10 when re-run. I switched to grading twice with the answers swapped and averaging.
 - **A similarity threshold alone cannot work.** "Capital of France" vs "capital of Germany" scored higher (87 %) than two real paraphrases (82 %). That is why the cache asks a model to confirm.
 - **Rare facts.** Neither Haiku nor Sonnet knew what McGill's ECSESS is; only Opus did. Some "simple" questions are not simple for small models.
+- **Getting an agent to follow advice.** The hook worked, but the lead model often ignored "delegate this to Sonnet": a subagent name was wrong (plugins prefix it), Opus preferred to answer itself, and in a live session even Haiku wrote the code itself. What fixed it: a cheap Haiku lead, and the routing rule moved from a note next to the message into the lead agent's system prompt. With that, 5 of 5 test runs were routed as advised.
+- **Real runs find what unit tests can't.** A subagent ran in the background and got launched twice; another time the lead asked "should I summarize it?" instead of showing the result. All 54 unit tests were green each time: only live runs revealed these.
 - **Debugging basics**, like an old server still holding port 8000 and returning "Method Not Allowed" for a route that existed in the new code.
 
 ## Accomplishments that I'm proud of
 
 - Real, reproducible numbers instead of claims: three benchmark versions (v1 → v3), each fixing what the previous one revealed.
 - Being honest about limits: no invented energy figures, a list of what the router gets wrong, and which agents are tested versus untested.
-- ThinkLess running inside a real agent (Claude Code) through MCP.
+- ThinkLess acting inside a real agent: Claude Code delegating automatically to Haiku, Sonnet or Opus workers, installable by anyone from GitHub.
 - Understanding my own project well enough to explain every step, as a first-year student at my first hackathon.
 
 ## What I learned
