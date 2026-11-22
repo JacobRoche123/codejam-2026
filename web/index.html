@@ -17,6 +17,7 @@
     </div>
     <nav class="tabs" role="tablist">
       <button role="tab" class="tab active" data-tab="live" aria-selected="true">Live demo</button>
+      <button role="tab" class="tab" data-tab="report" aria-selected="false">Savings report</button>
       <button role="tab" class="tab" data-tab="bench" aria-selected="false">Benchmark</button>
       <button role="tab" class="tab" data-tab="how" aria-selected="false">How it works</button>
     </nav>
@@ -91,6 +92,91 @@
           </div>
           <div id="totals" class="card" hidden></div>
         </aside>
+      </div>
+    </section>
+
+    <!-- Savings report -->
+    <section id="tab-report" class="panel">
+      <div class="report-intro">
+        <h2>How much did ThinkLess save you?</h2>
+        <p class="muted">Paste a prompt you sent to Claude. ThinkLess answers it with the model it picks, Claude Opus 5.5 answers it too, and a judge grades both answers blind. Every number below comes from real API calls.</p>
+      </div>
+
+      <form id="report-form" class="card">
+        <label for="report-request" class="card-title">Your prompt</label>
+        <textarea id="report-request" rows="4" placeholder="Paste the prompt you sent to Claude…" required></textarea>
+        <div class="examples">
+          <span class="muted">Try:</span>
+          <button type="button" class="chip" data-report-example="Translate 'See you tomorrow at the library' into Spanish and Italian.">Translation</button>
+          <button type="button" class="chip" data-report-example="Write a Python function that reads a CSV of expenses and returns the total per category, skipping invalid lines.">Code</button>
+          <button type="button" class="chip" data-report-example="Design the architecture of a ride-sharing app for 50,000 students, with the main trade-offs.">System design</button>
+        </div>
+        <div class="row">
+          <span class="muted small">Runs your prompt twice and asks a judge: about 1 to 15 cents on the API key.</span>
+          <button type="submit" class="primary" id="report-send">Generate report</button>
+        </div>
+      </form>
+
+      <form id="report-questions" class="card accent" hidden>
+        <div class="card-title">ThinkLess needs a few details first</div>
+        <p class="muted small">It asks instead of guessing. Answer, and the report continues.</p>
+        <div id="report-question-list"></div>
+        <div class="row end"><button type="submit" class="primary">Continue</button></div>
+      </form>
+
+      <div id="report-progress" class="card" hidden>
+        <ol class="progress">
+          <li data-step="1">Triage by Claude Haiku 5.5</li>
+          <li data-step="2">Answering with the chosen model, and with Claude Opus 5.5 in parallel</li>
+          <li data-step="3">Blind judging, twice with the order swapped</li>
+        </ol>
+      </div>
+
+      <div id="report-error" class="card error" hidden></div>
+
+      <div id="report" hidden>
+        <div class="card verdict">
+          <div class="verdict-main">
+            <span class="muted small">ThinkLess chose</span>
+            <div class="verdict-model"><span id="r-model"></span> <span id="r-badge" class="badge"></span></div>
+            <p id="r-reason" class="muted"></p>
+          </div>
+          <button type="button" class="ghost" id="r-copy">Copy summary</button>
+        </div>
+
+        <div class="kpis" id="r-kpis"></div>
+
+        <div class="card">
+          <div class="card-title">Where the money goes</div>
+          <div id="r-costs"></div>
+        </div>
+
+        <div class="answers">
+          <div class="card answer-col">
+            <div class="card-title row"><span>ThinkLess · <span id="r-left-model"></span></span><span id="r-left-score" class="score"></span></div>
+            <div id="r-left" class="answer"></div>
+          </div>
+          <div class="card answer-col">
+            <div class="card-title row"><span>Claude Opus 5.5 alone</span><span id="r-right-score" class="score"></span></div>
+            <div id="r-right" class="answer"></div>
+          </div>
+        </div>
+
+        <details class="card">
+          <summary class="card-title">What the judge said</summary>
+          <div id="r-judge"></div>
+        </details>
+
+        <div class="card method">
+          <div class="card-title">How this is measured</div>
+          <ul class="muted small">
+            <li><strong>Cost and tokens:</strong> real token counts returned by the Claude API × Anthropic's published prices. ThinkLess's total includes its triage (and any clarifying round).</li>
+            <li><strong>Quality:</strong> <span id="r-judge-model"></span> grades both answers without knowing which is which, twice with the order swapped; scores are averaged.</li>
+            <li><strong>Energy:</strong> not shown. Anthropic does not publish energy per request; fewer tokens on a smaller model means less compute, but we do not invent watt-hours.</li>
+            <li><strong>One prompt is one sample:</strong> answers vary between runs. The Benchmark tab averages 20 tasks.</li>
+          </ul>
+          <p class="muted small" id="r-overhead"></p>
+        </div>
       </div>
     </section>
 

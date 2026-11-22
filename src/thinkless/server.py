@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from .config import BASELINE, MAX_MODELS, TIERS, TRIAGE
 from .llm import LLM, AnthropicLLM
 from .pipeline import Router
+from .report import build_report
 from .triage import QA
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -32,6 +33,13 @@ class AskIn(BaseModel):
     compare: bool = False
     # Advisor mode only: the caller's own models, smallest → largest (any provider).
     available_models: list[str] | None = Field(default=None, max_length=MAX_MODELS)
+
+
+class ReportIn(BaseModel):
+    request: str = Field(min_length=1, max_length=8000)
+    answers: list[AnswerIn] | None = None
+    # Cost of the clarification round the page already paid for (shown in the total).
+    question_cost: float = Field(default=0.0, ge=0, le=1)
 
 
 def create_app(llm: LLM | None = None) -> FastAPI:
@@ -65,6 +73,14 @@ def create_app(llm: LLM | None = None) -> FastAPI:
         answers = [QA(a.question, a.answer) for a in body.answers] if body.answers else None
         return run_safely(
             lambda: router().route(body.request, answers, available_models=body.available_models)
+        )
+
+    @app.post("/api/report")
+    def report(body: ReportIn) -> dict:
+        """Savings report: ThinkLess vs Opus 5.5 on one prompt, graded blind by a judge."""
+        answers = [QA(a.question, a.answer) for a in body.answers] if body.answers else None
+        return run_safely(
+            lambda: build_report(router().llm, body.request, answers, question_cost=body.question_cost)
         )
 
     def run_safely(action: Callable[[], dict]) -> dict:

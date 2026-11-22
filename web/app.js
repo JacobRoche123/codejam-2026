@@ -323,3 +323,153 @@ fetch("/api/config")
       `Simple → ${cfg.tiers.simple} · Medium → ${cfg.tiers.medium} · Complex → ${cfg.tiers.complex} · Expert (rare) → ${cfg.tiers.expert}.`;
   })
   .catch(() => {});
+
+/* ---------- savings report ---------- */
+
+/* Report amounts in one unit: cents below one dollar, dollars above. */
+function cents(x) {
+  if (x === null || x === undefined) return "–";
+  return Math.abs(x) < 1 ? `${(x * 100).toFixed(2)} ¢` : "$" + x.toFixed(2);
+}
+
+const report = { request: "", questions: [], questionCost: 0 };
+
+document.querySelectorAll("[data-report-example]").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    $("#report-request").value = chip.dataset.reportExample;
+    $("#report-request").focus();
+  });
+});
+
+function reportProgress(step) {
+  // step: 0 = hidden, 1..3 = current step, 4 = all done
+  $("#report-progress").hidden = step === 0;
+  document.querySelectorAll("#report-progress li").forEach((li) => {
+    const n = Number(li.dataset.step);
+    li.className = n < step ? "done" : n === step ? "active" : "";
+  });
+}
+
+function pctText(x) {
+  return x === null || x === undefined ? "–" : `${x > 0 ? "−" : "+"}${Math.abs(Math.round(x))} %`;
+}
+
+async function generateReport(answers) {
+  $("#report-error").hidden = true;
+  $("#report").hidden = true;
+  $("#report-questions").hidden = true;
+  document.querySelectorAll("#report-form button, #report-questions button").forEach((b) => (b.disabled = true));
+
+  // The server does all three steps in one call; the steps advance on a timer so the user sees progress.
+  reportProgress(1);
+  const timers = [setTimeout(() => reportProgress(2), 2500), setTimeout(() => reportProgress(3), 12000)];
+  try {
+    const res = await fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request: report.request, answers, question_cost: report.questionCost }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail?.[0]?.msg || data.detail || `Error ${res.status}`);
+
+    if (data.status === "needs_answers") {
+      report.questions = data.questions;
+      report.questionCost = data.question_cost;
+      $("#report-question-list").innerHTML = data.questions
+        .map((q, i) => `<div class="question"><label for="rq${i}">${escapeHtml(q)}</label><input type="text" id="rq${i}" required></div>`)
+        .join("");
+      reportProgress(0);
+      $("#report-questions").hidden = false;
+      $("#rq0")?.focus();
+      return;
+    }
+    reportProgress(4);
+    renderReport(data);
+  } catch (err) {
+    reportProgress(0);
+    $("#report-error").textContent = err.message;
+    $("#report-error").hidden = false;
+  } finally {
+    timers.forEach(clearTimeout);
+    document.querySelectorAll("#report-form button, #report-questions button").forEach((b) => (b.disabled = false));
+  }
+}
+
+function renderReport(d) {
+  const t = d.thinkless, b = d.baseline, s = d.savings, q = d.quality;
+  report.last = d;
+
+  $("#r-model").textContent = `${d.choice.display} · effort ${d.choice.effort}`;
+  $("#r-badge").className = `badge ${d.choice.tier}`;
+  $("#r-badge").textContent = TIER_NAMES[d.choice.tier] || d.choice.tier;
+  $("#r-reason").textContent = d.choice.reason;
+
+  const saved = s.usd >= 0;
+  $("#r-kpis").innerHTML = `
+    <div class="card kpi ${saved ? "highlight" : "warn"}"><div class="label">${saved ? "Money saved" : "Extra cost"}</div>
+      <div class="value">${pctText(s.pct)}</div><div class="sub">${cents(t.cost)} instead of ${cents(b.cost)}</div></div>
+    <div class="card kpi"><div class="label">Tokens</div>
+      <div class="value">${pctText(s.tokens_pct)}</div><div class="sub">${t.tokens.toLocaleString("en")} vs ${b.tokens.toLocaleString("en")}</div></div>
+    <div class="card kpi"><div class="label">Quality kept</div>
+      <div class="value">${q.retained_pct === null ? "–" : Math.round(q.retained_pct) + " %"}</div><div class="sub">${q.thinkless}/10 vs ${q.baseline}/10 (Opus)</div></div>
+    <div class="card kpi"><div class="label">Time</div>
+      <div class="value">${ms(t.latency_ms)}</div><div class="sub">Opus alone: ${ms(b.latency_ms)}</div></div>`;
+
+  const max = Math.max(t.cost, b.cost) || 1;
+  const parts = [
+    ["Triage · Claude Haiku 5.5", t.triage_cost],
+    [`Answer · ${d.choice.display}`, t.answer_cost],
+  ];
+  if (t.question_cost) parts.unshift(["Clarifying round", t.question_cost]);
+  $("#r-costs").innerHTML = `
+    <div class="cost-row"><span>ThinkLess</span><div class="bar routed"><span style="width:${Math.max(1, (100 * t.cost) / max)}%"></span></div><strong>${cents(t.cost)}</strong></div>
+    <div class="cost-row"><span>Claude Opus 5.5 alone</span><div class="bar base"><span style="width:${Math.max(1, (100 * b.cost) / max)}%"></span></div><strong>${cents(b.cost)}</strong></div>
+    <ul class="cost-parts muted small">${parts.map(([k, v]) => `<li><span>${escapeHtml(k)}</span><span>${cents(v)}</span></li>`).join("")}</ul>`;
+
+  $("#r-left-model").textContent = d.choice.display;
+  $("#r-left-score").textContent = `${q.thinkless}/10`;
+  $("#r-right-score").textContent = `${q.baseline}/10`;
+  $("#r-left").innerHTML = renderMarkdown(t.answer || "");
+  $("#r-right").innerHTML = renderMarkdown(b.answer || "");
+
+  $("#r-judge").innerHTML = d.judge.comments
+    .map((c, i) => `<p class="small"><strong>Pass ${i + 1}${i ? " (order swapped)" : ""}:</strong> ${escapeHtml(c)}</p>`)
+    .join("");
+  $("#r-judge-model").textContent = d.judge.model;
+  $("#r-overhead").textContent = `Report overhead, not part of the savings: judging cost ${cents(d.judge.cost)}.`;
+  $("#report").hidden = false;
+  $("#report").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+$("#report-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  report.request = $("#report-request").value.trim();
+  if (!report.request) return;
+  report.questionCost = 0;
+  generateReport(null);
+});
+
+$("#report-questions").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const answers = report.questions.map((q, i) => ({ question: q, answer: $(`#rq${i}`).value.trim() }));
+  generateReport(answers);
+});
+
+$("#r-copy").addEventListener("click", async () => {
+  const d = report.last;
+  if (!d) return;
+  const text =
+    `ThinkLess savings report\n` +
+    `Prompt: ${d.request}\n` +
+    `Model chosen: ${d.choice.display} (effort ${d.choice.effort}) instead of Claude Opus 5.5\n` +
+    `Cost: ${cents(d.thinkless.cost)} vs ${cents(d.baseline.cost)} (${pctText(d.savings.pct)})\n` +
+    `Tokens: ${d.thinkless.tokens} vs ${d.baseline.tokens} (${pctText(d.savings.tokens_pct)})\n` +
+    `Quality (blind judge): ${d.quality.thinkless}/10 vs ${d.quality.baseline}/10\n`;
+  try {
+    await navigator.clipboard.writeText(text);
+    $("#r-copy").textContent = "Copied ✓";
+    setTimeout(() => ($("#r-copy").textContent = "Copy summary"), 1500);
+  } catch {
+    $("#r-copy").textContent = "Copy failed";
+  }
+});
