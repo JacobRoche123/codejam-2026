@@ -1,6 +1,6 @@
 {
   "name": "thinkless",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Ask before thinking: triages every prompt with Claude Haiku and delegates the work to the cheapest sufficient subagent (Haiku, Sonnet or Opus).",
   "author": { "name": "Jacob Roche" },
   "homepage": "https://github.com/JacobRoche123/codejam-2026",
