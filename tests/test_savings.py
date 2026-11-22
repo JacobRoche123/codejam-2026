@@ -97,3 +97,26 @@ def test_summary_and_report(project):
 def test_local_time_converts_utc():
     assert savings.local_time("bad") == "bad"
     assert len(savings.local_time("2026-11-21T20:00:00Z")) == 16
+
+
+def test_running_total_matches_the_full_scan_and_reuses_its_index(project, tmp_path):
+    index = tmp_path / "index.json"
+    total = savings.running_total(project, days=36500, index_file=index)
+    summary = savings.summarize(savings.collect(project, days=None))
+    assert total["prompts"] == summary["prompts"] == 2
+    assert total["saved"] == pytest.approx(summary["saved"])
+    # Second call: unchanged files are not parsed again.
+    calls = []
+    original = savings.read_session
+    savings.read_session = lambda p: calls.append(p) or original(p)
+    try:
+        assert savings.running_total(project, days=36500, index_file=index)["prompts"] == 2
+    finally:
+        savings.read_session = original
+    assert calls == []
+
+
+def test_counter_text():
+    assert "nothing yet" in savings.counter_text({"prompts": 0, "actual": 0, "opus": 0, "saved": 0})
+    text = savings.counter_text({"prompts": 23, "actual": 2.0, "opus": 3.2, "saved": 1.2})
+    assert text == "saved so far: $1.20 vs Opus 5.5 (−38 %) over 23 prompts"

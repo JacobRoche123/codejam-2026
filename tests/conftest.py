@@ -40,9 +40,13 @@ def make_llm():
 @pytest.fixture(autouse=True)
 def isolated_files(monkeypatch, tmp_path):
     """Every test gets its own empty cache and no real API key, whatever is on this machine."""
-    from thinkless import llm, memory
+    from thinkless import llm, memory, savings
 
     monkeypatch.setattr(memory, "CACHE_FILE", tmp_path / "cache.json")
+    monkeypatch.setattr(savings, "PROJECTS_DIR", tmp_path / "no_projects")
+    monkeypatch.setattr(savings, "COUNTER_CACHE", tmp_path / "savings_index.json")
+    monkeypatch.delenv("THINKLESS_COUNTER", raising=False)
+    monkeypatch.delenv("THINKLESS_KEY_FILE", raising=False)
     monkeypatch.setattr(llm, "KEY_FILE", tmp_path / "no_key")
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("THINKLESS_ANTHROPIC_API_KEY", raising=False)

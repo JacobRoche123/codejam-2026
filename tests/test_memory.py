@@ -96,8 +96,10 @@ def test_stop_event_stores_the_exchange_and_prints_nothing(tmp_path, monkeypatch
 
 
 def test_without_a_key_the_hook_adds_nothing_and_the_router_triages():
-    # isolated_files removed every key, and no llm is injected
-    assert hook.run({"prompt": "Write a Python function to sort a list", "cwd": "/p"}) == ""
+    # isolated_files removed every key, and no llm is injected: no triage advice, only the counter
+    text = hook.run({"prompt": "Write a Python function to sort a list", "cwd": "/p"})
+    assert text.startswith("[ThinkLess counter]")
+    assert "ThinkLess advice" not in text
 
 
 def test_with_a_key_the_hook_names_the_model(monkeypatch):
@@ -105,3 +107,15 @@ def test_with_a_key_the_hook_names_the_model(monkeypatch):
     monkeypatch.setattr(hook, "AnthropicLLM", lambda: FakeLLM([verdict(complexity="complex")]))
     text = hook.run({"prompt": "Design a ride-sharing system", "cwd": "/p"})
     assert "Model: Claude Opus 5.5" in text
+
+
+def test_the_hook_adds_the_live_counter(monkeypatch):
+    monkeypatch.setattr(hook.savings, "running_total",
+                        lambda: {"prompts": 3, "actual": 0.10, "opus": 0.30, "saved": 0.20})
+    text = hook.run({"prompt": "Write a function that parses dates", "cwd": "/p"})  # keyless mode
+    assert text.startswith("[ThinkLess counter] saved so far: 20.00 ¢ vs Opus 5.5 (−67 %) over 3 prompts")
+
+
+def test_the_counter_can_be_turned_off(monkeypatch):
+    monkeypatch.setenv("THINKLESS_COUNTER", "off")
+    assert hook.run({"prompt": "Write a function that parses dates", "cwd": "/p"}) == ""

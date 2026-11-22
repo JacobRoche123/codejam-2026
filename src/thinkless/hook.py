@@ -16,7 +16,7 @@ import os
 import sys
 from typing import Any
 
-from . import memory
+from . import memory, savings
 from .config import TIERS
 from .llm import LLM, AnthropicLLM, resolve_api_key
 from .pipeline import Router
@@ -104,17 +104,37 @@ def run(event: dict[str, Any], llm: LLM | None = None) -> str:
     prompt = event.get("prompt", "")
     if should_skip(prompt):
         return ""
+    counter = counter_block()
     try:
         update_cache(event)
         hit = memory.lookup(prompt, event.get("cwd", ""))
     except OSError:  # an unreadable transcript or cache file must never block the prompt
         hit = None
     if hit:
-        return memory.format_hit(*hit)
+        return join(memory.format_hit(*hit), counter)
     if llm is None and resolve_api_key() is None:
-        return ""  # no key: the router agent does the triage itself
+        return counter  # no key: the router agent does the triage itself
     advice = Router(llm or AnthropicLLM()).route(prompt)
-    return format_advice(advice)
+    return join(format_advice(advice), counter)
+
+
+def join(*blocks: str) -> str:
+    return "\n\n".join(b for b in blocks if b)
+
+
+def counter_block() -> str:
+    """The live savings counter the router shows in its opening line ('' when unavailable)."""
+    if os.environ.get("THINKLESS_COUNTER", "").lower() == "off":
+        return ""
+    try:
+        text = savings.counter_text(savings.running_total())
+    except Exception:  # a counter problem must never block or slow down the prompt
+        return ""
+    return (
+        f"[ThinkLess counter] {text}\n"
+        "Add this to your opening line, for example: "
+        f'"(ThinkLess: Claude Sonnet 5.5 · {text})". It covers the prompts before this one.'
+    )
 
 
 def main() -> None:

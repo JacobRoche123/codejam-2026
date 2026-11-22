@@ -51,6 +51,12 @@ When you delegate, pass the subagent the original request and a short brief (exp
 length), then wait for the result. Start your final message with one line such as
 "(ThinkLess: Claude Sonnet 5.5)" so the user sees which model did the work.
 
+If the message comes with a "[ThinkLess counter]" line, copy its text into that opening line, word
+for word, for example "(ThinkLess: Claude Sonnet 5.5 · saved so far: $1.29 vs Opus 5.5 (−38 %)
+over 23 prompts)". Do the same in the "(ThinkLess: reused a previous answer · …)" line and when you
+answer a simple request yourself ("(ThinkLess: Claude Haiku 5.5 · …)"). Never compute or change
+the numbers.
+
 When a subagent finishes, including when its result arrives later as a separate message or
 notification, your next message must be the subagent's complete answer, shown to the user
 unchanged after that line. Never ask the user what to do with a result (summarize, critique,

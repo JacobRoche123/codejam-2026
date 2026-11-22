@@ -197,6 +197,57 @@ def collect(projects_dir: Path = PROJECTS_DIR, days: float | None = 30, now: flo
     return sorted(turns, key=lambda t: t.time, reverse=True)
 
 
+# ---------- live counter ----------
+
+COUNTER_CACHE = Path.home() / ".config" / "thinkless" / "savings_index.json"
+
+
+def running_total(projects_dir: Path | None = None, days: float = 30, now: float | None = None,
+                  index_file: Path | None = None) -> dict[str, float]:
+    """Totals for the live counter, fast: each session file is parsed only when it changed.
+
+    The index stores, per file, its size and modification time with the (actual, opus) cost of
+    every routed prompt, so most hook runs re-read a single file: the current session.
+    """
+    now = time.time() if now is None else now
+    projects_dir = projects_dir or PROJECTS_DIR  # resolved at call time, so tests can redirect it
+    index_file = index_file or COUNTER_CACHE
+    try:
+        index = json.loads(index_file.read_text())
+    except (OSError, json.JSONDecodeError):
+        index = {}
+    fresh: dict[str, Any] = {}
+    prompts, actual, opus = 0, 0.0, 0.0
+    for path in projects_dir.glob("*/*.jsonl"):
+        stat = path.stat()
+        if now - stat.st_mtime > days * 86400:
+            continue
+        key, stamp = str(path), [stat.st_size, stat.st_mtime]
+        entry = index.get(key)
+        if not entry or entry.get("stamp") != stamp:
+            turns = [t for t in read_session(path) if t.thinkless and (t.lead or t.workers)]
+            entry = {"stamp": stamp, "turns": [[t.actual, t.opus_estimate] for t in turns]}
+        fresh[key] = entry
+        for a, o in entry["turns"]:
+            prompts, actual, opus = prompts + 1, actual + a, opus + o
+    try:
+        index_file.parent.mkdir(parents=True, exist_ok=True)
+        index_file.write_text(json.dumps(fresh))
+    except OSError:
+        pass
+    return {"prompts": prompts, "actual": actual, "opus": opus, "saved": opus - actual}
+
+
+def counter_text(total: dict[str, float]) -> str:
+    """'saved so far: $1.29 vs Opus 5.5 (−38 %) over 23 prompts'."""
+    if not total["prompts"]:
+        return "saved so far: nothing yet (first routed prompt)"
+    pct = round(100 * total["saved"] / total["opus"]) if total["opus"] else 0
+    sign = "−" if pct >= 0 else "+"
+    return (f"saved so far: {money(total['saved'])} vs Opus 5.5 ({sign}{abs(pct)} %) "
+            f"over {total['prompts']} prompt{'s' if total['prompts'] != 1 else ''}")
+
+
 # ---------- summary and report ----------
 
 def summarize(turns: list[Turn]) -> dict[str, Any]:
