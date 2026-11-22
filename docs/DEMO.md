@@ -14,15 +14,20 @@ Spoken text is in quotes. Actions are in **bold**. About 500 spoken words: 4 min
 
 **Window 2: Claude Code with the plugin**
 
-4. In a second terminal: `cd ~/codejam-2026 && claude --agent thinkless:router`. Check that the header says **Haiku 5.5** and **@thinkless:router**.
-5. Send one warm-up message, for example `What is the capital of Canada?`, so the hook is downloaded and fast. Then type `/clear` to start clean.
-6. Make the terminal font large (⌘ +).
+4. Clear the plugin's answer cache, so the demo request is not already cached: `rm -f ~/.config/thinkless/cache.json`.
+5. In a second terminal: `cd ~/codejam-2026 && claude --agent thinkless:router`. Check that the header says **Haiku 5.5** and **@thinkless:router**.
+6. Send one warm-up message, for example `What is the capital of Canada?`, so the hook is downloaded and fast, and check that the answer starts with "(ThinkLess: … · saved so far: …)". Then type `/clear` to start clean.
+7. Make the terminal font large (⌘ +).
+
+**Window 3: the savings page**
+
+8. In a third terminal: `uvx --from git+https://github.com/JacobRoche123/codejam-2026 thinkless-savings`. Keep the page it opens in a browser tab, and the terminal ready to run it again.
 
 **Ready to paste (keep them in a note):**
 
 - `What is the capital city of Australia?`
 - `What is the capital of Austria?`
-- `Write a Python function that reads a CSV of expenses and returns the total per category, skipping invalid lines`
+- `Write a Python function that groups a list of course codes like COMP-251 by department and counts them`
 
 **Check:** Wi-Fi works. If not, use Plan B at the end of this page.
 
@@ -64,27 +69,37 @@ Spoken text is in quotes. Actions are in **bold**. About 500 spoken words: 4 min
 
 "We measured it on 20 tasks, graded blind by another model, twice, with the order swapped: **60 % less billed compute**, **27 % fewer tokens**, keeping **91 % of Opus's quality**. And one surprise: lowering the thinking effort saves only 13 % of tokens. Choosing the right model is the real lever."
 
-### 2:05 – 3:30 · ThinkLess acts: inside a real agent (window 2)
+### 2:05 – 3:15 · ThinkLess acts: inside a real agent (window 2)
 
 **Switch to Claude Code. Point at the header.**
 
-"Now the agent part. This is Claude Code, a real coding agent, with the ThinkLess plugin. The lead agent runs on **Haiku**, the cheap model. I don't type any special command."
+"Now the agent part. This is Claude Code, a real coding agent, with the ThinkLess plugin. The lead agent runs on **Haiku**, the cheap model. No API key, no special command."
 
-**Paste the CSV request and press Return.**
+**Paste the course-codes request and press Return.**
 
-"A hook triages my message automatically. ThinkLess says this needs Claude Sonnet 5.5, so the lead **delegates** it. Look: `thinkless:sonnet`. Haiku didn't do the work, and Opus was never called."
+"ThinkLess decides this needs Claude Sonnet 5.5, so the lead **delegates** it. Look: `thinkless:sonnet`. Haiku didn't do the work, and Opus was never called."
 
 **While it runs (about 15 seconds):**
 
-"For a hard task, like designing a system, it goes to Opus: `thinkless:opus`. For a simple one, Haiku answers alone for three tenths of a cent. A cheap lead, and the big models only when the task deserves it."
+"For a hard task, like designing a system, it goes to Opus. For a simple one, Haiku answers alone for three tenths of a cent. A cheap lead, and the big models only when the task deserves it."
 
-**Point at the result when it arrives.**
+**When the answer arrives, point at its first line.**
 
-"And anyone can install it: two commands, from our public GitHub. It also works as a tool for other agents, and the advice adapts to any provider's models."
+"Every answer says which model did the work, and this counter: how much ThinkLess has saved so far compared with Opus."
 
-### 3:30 – 3:50 · Close
+### 3:15 – 3:45 · The cache and the savings report
 
-"ThinkLess: think less, waste less. Real measurements, real limits documented, and an agent you can install today. Thank you!"
+**Paste the same course-codes request again and press Return.**
+
+"Same question again: ThinkLess recognizes it and reuses the answer. No Sonnet call at all: in our test, 2.46 cents the first time, 0.25 the second."
+
+**Switch to window 3 and run `thinkless-savings`, or show the page you opened before.**
+
+"And this page reads Claude Code's own logs, with no API call: every prompt, the model used, what it cost, and what the same work would have cost on Opus."
+
+### 3:45 – 4:00 · Close
+
+"ThinkLess: think less, waste less. Real measurements, real limits documented, and an agent anyone can install today, with no API key. Thank you!"
 
 ---
 
@@ -131,6 +146,15 @@ Cut demo 2 (vague request) and shorten the numbers to one sentence: "60 % less c
 
 **"What does the hook see?"**
 "Only the current message, not the conversation. So a short follow-up like 'step 6 problem' can be misjudged. Reading the recent conversation before triaging is an improvement we'd add next."
+
+**"How can it work without an API key?"**
+"The lead agent runs on Haiku inside your Claude plan, and its system prompt holds the routing rules, so it decides the model itself. With a key, a dedicated triage call with a fixed answer format and hard limits in code decides instead, for two hundredths of a cent per message. Without a key, it's free in API credits, but it still uses a little of your plan's usage."
+
+**"Isn't reusing an answer dangerous?"**
+"It can be, so the cache is strict: same project, last 24 hours, at least 85 % similar, and the lead checks that the question is really the same and doesn't depend on files that changed. 'Capital of Austria' versus 'capital of Australia' is 97 % similar text and must not be reused. And it only saves money when it avoids a Sonnet or Opus call."
+
+**"Where does the counter come from? Is it real?"**
+"It reads Claude Code's own logs: the exact tokens each model used. The actual cost is measured. The Opus side is an estimate: the same tokens priced as Opus, since we didn't actually run Opus. On a subscription these are API-equivalent amounts, so the saving is plan usage, not dollars. And when a task really needs Opus, ThinkLess costs slightly more, about 3 %, because of the Haiku lead; the report shows that too."
 
 **"Did you use AI to build this?"**
 "Yes, Claude Code as a pair programmer and as a teacher. It's my first hackathon, so I asked it to explain every file and ran experiments myself until I could explain the whole data flow, which is what I just did."

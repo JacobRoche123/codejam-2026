@@ -2,7 +2,7 @@
 
 This guide adds ThinkLess to **Claude Code** as an advisor tool. You do not need to download the project. For every step it says **which app to open**, **where to type**, **what to type**, and **what you should see**.
 
-> **Want ThinkLess to route every prompt automatically**, with no "use the thinkless tool" to type? Do steps 0 to 3 below, then follow [ThinkLess acts: automatic routing in Claude Code](../README.md#thinkless-acts-automatic-routing-in-claude-code) in the README (the Claude Code plugin) instead of step 4.
+> **Most people want the plugin instead.** It routes every prompt automatically, needs no API key, reuses earlier answers and shows a live savings counter. Follow **[THINKLESS.md](../THINKLESS.md)**. This page is for the advisor tool alone (`choose_model`), which other agents can call and which does need an API key.
 
 ```mermaid
 flowchart LR

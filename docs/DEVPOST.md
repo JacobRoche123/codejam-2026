@@ -42,7 +42,7 @@ ThinkLess is a router that sits in front of an AI assistant. For every request i
 
 It works three ways: a demo web app that shows every decision, an advisor API that returns only the recommended model, and an **MCP tool** that plugs into AI agents like Claude Code, so an agent can ask ThinkLess which model to use before it starts working. It is not tied to Claude: an agent can send its own models, ordered from smallest to largest, and ThinkLess picks one of them, so the advice works for any model family. Anyone can install it in one command.
 
-**ThinkLess also acts.** As a Claude Code plugin, it triages **every** prompt automatically (no command to type), and a cheap lead agent on Haiku delegates the work to a Sonnet or Opus worker only when the task deserves it. In live runs, a simple question stayed on Haiku for $0.003, a coding task went to Sonnet, and a system-design task went to Opus.
+**ThinkLess also acts.** As a Claude Code plugin, it routes **every** prompt automatically (no command to type), and a cheap lead agent on Haiku delegates the work to a Sonnet, Opus or Fable worker only when the task deserves it. It needs **no API key**: the lead triages inside the user's Claude plan. A repeated question reuses its earlier answer: in a live test, a coding request cost 2.46 ¢ the first time and 0.25 ¢ the second. Every answer opens with the model that did the work and a **live counter** ("saved so far: $1.43 vs Opus 5.5 (−40 %) over 25 prompts"), and `thinkless-savings` turns Claude Code's own logs into a savings report, with no API call.
 
 **Measured on 20 tasks, graded blind:** 60 % less billed compute and 27 % fewer tokens than sending everything to Opus, while keeping 91 % of its quality.
 
@@ -53,9 +53,10 @@ It works three ways: a demo web app that shows every decision, an advisor API th
 - **Guardrails in Python** on top of the prompt: at most 3 questions, a single round, safe defaults. A prompt is a request; code is a guarantee.
 - **A similarity cache** built in two layers: free text similarity with Python's `difflib`, then a Haiku check only when the texts look close.
 - **The MCP Python SDK** to expose ThinkLess as a tool that agents can call.
-- **A Claude Code plugin**: a `UserPromptSubmit` hook that triages each prompt, three worker subagents (Haiku, Sonnet, Opus, each with its own effort level), and a lead agent, ThinkLess Router, whose system prompt is the routing rule. Installable from the public GitHub repo in two commands.
+- **A Claude Code plugin**: a lead agent, ThinkLess Router, whose system prompt holds the routing rules; four worker subagents pinned to Claude Haiku 5.5, Sonnet 5.5, Opus 5.5 and Fable 5.2, each with its own effort level; a `UserPromptSubmit` hook that offers cached answers, the live counter and, with an optional API key, a precise triage; and a `Stop` hook that stores each finished exchange in the cache. Installable from the public GitHub repo in two commands.
+- **A savings dashboard from logs**: it parses Claude Code's session files, deduplicates the usage repeated across log lines of one API request, links each worker subagent to its prompt, prices every token (including 1-hour cache writes), and compares with the same work priced as Opus.
 - **A benchmark** of 20 tasks: each runs through ThinkLess and through Opus alone, and Claude Sonnet grades both answers blind, twice with the order swapped. A second benchmark compares thinking-effort levels.
-- **67 offline tests** with a fake model, so the logic is checked for free in under a second.
+- **87 offline tests** with a fake model, so the logic is checked for free in under a second.
 
 I built it with Claude Code as a pair programmer, and used it as a teacher too: I asked it to explain every file, then did small experiments myself (changing prices, breaking a test on purpose, predicting results) until I could explain the whole data flow on my own.
 
@@ -73,7 +74,7 @@ I built it with Claude Code as a pair programmer, and used it as a teacher too: 
 
 - Real, reproducible numbers instead of claims: three benchmark versions (v1 → v3), each fixing what the previous one revealed.
 - Being honest about limits: no invented energy figures, a list of what the router gets wrong, and which agents are tested versus untested.
-- ThinkLess acting inside a real agent: Claude Code delegating automatically to Haiku, Sonnet or Opus workers, installable by anyone from GitHub.
+- ThinkLess acting inside a real agent: Claude Code delegating automatically to Haiku, Sonnet or Opus workers, installable by anyone from GitHub, with no API key, a working answer cache and a live savings counter.
 - Understanding my own project well enough to explain every step, as a first-year student at my first hackathon.
 
 ## What I learned
@@ -87,7 +88,7 @@ I built it with Claude Code as a pair programmer, and used it as a teacher too: 
 ## What's next for ThinkLess
 
 - **Host it online** (MCP over HTTP, with authentication and rate limits) so agents that need remote tools, like ChatGPT, can use it.
-- **A triage that needs no Anthropic key**: other triage backends, or MCP sampling so the agent's own model does the triage. Today the advice works for any provider, but the triage still runs on Claude Haiku.
-- **A held-out benchmark** of fresh tasks, since the triage rules were tuned on the same 20 tasks.
-- **A persistent cache** that survives restarts, and smarter paraphrase matching.
+- **Keyless triage outside Claude Code**: the plugin already needs no key, but the advisor API and MCP tool still triage with Claude Haiku over the API; MCP sampling could let the calling agent's own model do it.
+- **A held-out benchmark** of fresh tasks, since the triage rules were tuned on the same 20 tasks, and a benchmark of the keyless router's own triage.
+- **Smarter cache matching** for paraphrases that share few words, and quality checks in the savings dashboard.
 
