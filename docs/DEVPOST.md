@@ -52,7 +52,7 @@ It works three ways: a demo web app that shows every decision, an advisor API th
 - **A similarity cache** built in two layers: free text similarity with Python's `difflib`, then a Haiku check only when the texts look close.
 - **The MCP Python SDK** to expose ThinkLess as a tool that agents can call.
 - **A benchmark** of 20 tasks: each runs through ThinkLess and through Opus alone, and Claude Sonnet grades both answers blind, twice with the order swapped. A second benchmark compares thinking-effort levels.
-- **38 offline tests** with a fake model, so the logic is checked for free in under a second.
+- **54 offline tests** with a fake model, so the logic is checked for free in under a second.
 
 I built it with Claude Code as a pair programmer, and used it as a teacher too: I asked it to explain every file, then did small experiments myself (changing prices, breaking a test on purpose, predicting results) until I could explain the whole data flow on my own.
 

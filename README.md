@@ -77,6 +77,58 @@ flowchart LR
 | **Demo app** | Answers the request and shows every decision, its model, tokens, cost and time, next to "everything on Opus" | `uv run thinkless` → http://127.0.0.1:8000 |
 | **Advisor API** | Returns the recommended model and effort, without answering; accepts your own list of models | `POST /api/route` |
 | **MCP tool** | Plugs into Claude Code, Claude Desktop or any MCP agent as a `choose_model` tool, for any model family | `uv run thinkless-mcp` |
+| **Claude Code plugin** | Routes **every** prompt automatically and delegates the work to a Haiku, Sonnet or Opus subagent: nothing to type | `claude plugin install thinkless@thinkless` |
+
+## ThinkLess acts: automatic routing in Claude Code
+
+With the plugin, ThinkLess is no longer an advisor you have to call: it runs on **every prompt** (a `UserPromptSubmit` hook) and Claude **delegates** the work to the subagent ThinkLess picked. Run Claude Code on a cheap lead model (Haiku) and only hard tasks climb to Sonnet or Opus.
+
+```mermaid
+flowchart TD
+    U["You type a request<br/>in Claude Code"] --> H["🪝 ThinkLess hook<br/>(automatic, every prompt)"]
+    H -->|"triage · Haiku · ~0.02 ¢"| V{Difficulty}
+    V -- simple --> L["Lead model (Haiku)<br/>answers directly"]
+    V -- medium --> M["Subagent thinkless:medium<br/>Sonnet · effort medium"]
+    V -- complex --> O["Subagent thinkless:large<br/>Opus · effort high"]
+    V -- ambiguous --> Q["Lead asks the user<br/>clarifying questions"]
+```
+
+**Measured in real Claude Code runs** (lead model Haiku, plugin loaded, Nov 2026; one run each, costs from Claude Code's own usage report):
+
+| Prompt | ThinkLess decision | Models used | Cost |
+|---|---|---|---|
+| "What is the capital of Australia?" | simple | Haiku only | $0.003 |
+| "Write a Python function that reads a CSV of expenses…" | medium → `thinkless:medium` | Haiku $0.004 + Sonnet $0.079 | $0.083 |
+| "Design the architecture of a ride-sharing app for 50,000 students…" | complex → `thinkless:large` | Haiku $0.005 + Opus $0.204 | $0.210 |
+
+For comparison, Claude Code running on Opus spent $0.11 to $0.13 on a five-bullet summary of the causes of the French Revolution, a task ThinkLess classified as simple in one run and medium in another (the triage is not perfectly consistent). These are single runs, not a benchmark: the [API benchmark](#results) is the controlled measurement.
+
+**Install (Claude Code):**
+
+1. Save your Anthropic API key in ThinkLess's own private file (the key is hidden while you paste it):
+
+   ```bash
+   mkdir -p ~/.config/thinkless && read -s "K?Paste your Anthropic API key: " && printf '%s' "$K" > ~/.config/thinkless/api_key && chmod 600 ~/.config/thinkless/api_key && unset K && echo
+   ```
+
+   Do **not** export `ANTHROPIC_API_KEY` in your shell for this: Claude Code itself would pick it up and switch from your subscription to API billing.
+
+2. Add the marketplace and install the plugin:
+
+   ```bash
+   claude plugin marketplace add JacobRoche123/codejam-2026
+   claude plugin install thinkless@thinkless
+   ```
+
+3. Start Claude Code on a cheap lead model and work as usual:
+
+   ```bash
+   claude --model haiku
+   ```
+
+Turn the hook off for one session with `THINKLESS_HOOK=off claude`. Slash commands and replies under three words are never triaged.
+
+**Limits.** Delegation depends on the lead model following the advice: in our runs Haiku did, while an Opus lead, given softer wording, preferred to answer itself. Each subagent call carries Claude Code's own context, so a medium task costs more than in the raw API benchmark. The triage adds about 2 to 3 seconds per prompt.
 
 ## Install ThinkLess as an advisor tool (one command)
 
@@ -294,7 +346,7 @@ The MCP tool takes the same optional `available_models` argument, and its descri
 Run the tests (offline, free, with a fake model):
 
 ```bash
-uv run pytest -q          # 38 tests
+uv run pytest -q          # 54 tests
 ```
 
 Reproduce the benchmarks (real API calls, about $1.60 and $0.80):
@@ -330,9 +382,11 @@ flowchart TD
 | [`src/thinkless/pipeline.py`](src/thinkless/pipeline.py) | `Router.ask` (full answer) and `Router.route` (advice only), with per-step tracing |
 | [`src/thinkless/server.py`](src/thinkless/server.py) | FastAPI: `/api/ask`, `/api/route`, `/api/benchmark` |
 | [`src/thinkless/mcp_server.py`](src/thinkless/mcp_server.py) | MCP server exposing `choose_model` |
+| [`src/thinkless/hook.py`](src/thinkless/hook.py) | Claude Code hook: triages every prompt and tells Claude which subagent to use |
+| [`plugin/`](plugin/) | Claude Code plugin: the hook, the MCP server and the `small`, `medium`, `large` subagents |
 | [`web/`](web/) | Demo page: live trace, benchmark tab, how-it-works |
 | [`bench/`](bench/) | Tasks, benchmark scripts and raw results |
-| [`tests/`](tests/) | 38 offline tests |
+| [`tests/`](tests/) | 54 offline tests |
 
 **Stack:** Python 3.12, Anthropic Python SDK, FastAPI, MCP Python SDK, vanilla HTML/CSS/JS. Models: Claude Haiku 5.5, Sonnet 5.5 and Opus 5.5.
 

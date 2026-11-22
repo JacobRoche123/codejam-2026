@@ -2,6 +2,8 @@
 
 This guide adds ThinkLess to **Claude Code** as an advisor tool. You do not need to download the project. For every step it says **which app to open**, **where to type**, **what to type**, and **what you should see**.
 
+> **Want ThinkLess to route every prompt automatically**, with no "use the thinkless tool" to type? Do steps 0 to 3 below, then follow [ThinkLess acts: automatic routing in Claude Code](../README.md#thinkless-acts-automatic-routing-in-claude-code) in the README (the Claude Code plugin) instead of step 4.
+
 ```mermaid
 flowchart LR
     S0["0 · Open Terminal"] --> S1["1 · Install uv"]
