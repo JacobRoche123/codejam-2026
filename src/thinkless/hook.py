@@ -18,11 +18,12 @@ from typing import Any
 from .llm import LLM, AnthropicLLM
 from .pipeline import Router
 
-# The subagent that runs each size, as defined in plugin/agents/*.md.
+# The subagent that runs each size, as defined in plugin/agents/*.md. Claude Code prefixes
+# plugin subagents with the plugin name: agents/small.md becomes "thinkless:small".
 SUBAGENTS = {
-    "small": ("thinkless-small", "Claude Haiku 5.5, effort low"),
-    "medium": ("thinkless-medium", "Claude Sonnet 5.5, effort medium"),
-    "large": ("thinkless-large", "Claude Opus 5.5, effort high"),
+    "small": ("thinkless:small", "Claude Haiku 5.5, effort low"),
+    "medium": ("thinkless:medium", "Claude Sonnet 5.5, effort medium"),
+    "large": ("thinkless:large", "Claude Opus 5.5, effort high"),
 }
 
 MIN_WORDS = 3  # "thanks", "ok go", "yes": not worth a triage call
@@ -62,13 +63,14 @@ def format_advice(advice: dict[str, Any]) -> str:
     if rec["size"] == "large":
         lines.append(
             f"Action: this task needs the most capable model. Do it yourself with careful reasoning, "
-            f"or delegate it to the `{agent}` subagent."
+            f'or delegate it with the Task tool, subagent_type "{agent}".'
         )
     else:
         lines.append(
-            f"Action: delegate this task to the `{agent}` subagent, which runs on a cheaper model "
-            "and is enough for it. Exception: if the full answer fits in one or two sentences, "
-            "answer directly and briefly instead (delegating would cost more)."
+            f'Action: delegate this task with the Task tool, subagent_type "{agent}": it runs on a '
+            "cheaper model that is enough here. Pass it the task brief below and relay its answer. "
+            "Only exception: if the complete answer fits in one or two sentences, answer directly "
+            "(delegating would cost more)."
         )
     if advice.get("brief"):
         lines.append(f"Task brief for the subagent: {advice['brief']}")

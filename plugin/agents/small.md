@@ -1,6 +1,6 @@
 ---
-name: thinkless-small
-description: ThinkLess small-model worker on Claude Haiku. Use it when ThinkLess advice says to delegate to thinkless-small, for simple tasks such as facts, short rewrites, translations, classification and short summaries.
+name: small
+description: ThinkLess small-model worker on Claude Haiku. Use it when ThinkLess advice says to delegate to thinkless:small, for simple tasks such as facts, short rewrites, translations, classification and short summaries.
 model: haiku
 effort: low
 color: green

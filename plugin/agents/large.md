@@ -1,6 +1,6 @@
 ---
-name: thinkless-large
-description: ThinkLess large-model worker on Claude Opus. Use it when ThinkLess advice says to delegate to thinkless-large, for hard reasoning, proofs, non-trivial algorithms, system design with trade-offs and subtle debugging.
+name: large
+description: ThinkLess large-model worker on Claude Opus. Use it when ThinkLess advice says to delegate to thinkless:large, for hard reasoning, proofs, non-trivial algorithms, system design with trade-offs and subtle debugging.
 model: opus
 effort: high
 color: purple

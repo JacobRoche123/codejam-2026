@@ -1,6 +1,6 @@
 ---
-name: thinkless-medium
-description: ThinkLess medium-model worker on Claude Sonnet. Use it when ThinkLess advice says to delegate to thinkless-medium, for code of moderate size, multi-step explanations, summaries, comparisons and plans.
+name: medium
+description: ThinkLess medium-model worker on Claude Sonnet. Use it when ThinkLess advice says to delegate to thinkless:medium, for code of moderate size, multi-step explanations, summaries, comparisons and plans.
 model: sonnet
 effort: medium
 color: yellow
