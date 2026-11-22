@@ -4,6 +4,7 @@ description: ThinkLess small-model worker on Claude Haiku. Use it when ThinkLess
 model: haiku
 effort: low
 color: green
+background: false
 ---
 
 You are the ThinkLess small-model worker. ThinkLess judged this task simple, so a fast,

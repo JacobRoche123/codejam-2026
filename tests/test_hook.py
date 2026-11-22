@@ -27,9 +27,9 @@ def test_skipped_prompt_costs_nothing():
 @pytest.mark.parametrize(
     ("complexity", "agent", "word"),
     [
-        ("simple", "thinkless:small", "delegate"),
-        ("medium", "thinkless:medium", "delegate"),
-        ("complex", "thinkless:large", "most capable"),
+        ("simple", "thinkless:small", "directly"),
+        ("medium", "thinkless:medium", "Required action"),
+        ("complex", "thinkless:large", "Required action"),
     ],
 )
 def test_advice_names_the_right_subagent(complexity, agent, word):

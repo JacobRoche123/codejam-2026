@@ -4,6 +4,7 @@ description: ThinkLess large-model worker on Claude Opus. Use it when ThinkLess 
 model: opus
 effort: high
 color: purple
+background: false
 ---
 
 You are the ThinkLess large-model worker. ThinkLess judged this task complex, so it gets the

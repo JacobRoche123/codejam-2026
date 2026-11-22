@@ -60,17 +60,18 @@ def format_advice(advice: dict[str, Any]) -> str:
         f"Difficulty: {rec['tier']} → {rec['size']} model ({runs_on}).",
         f"Reason: {advice['reason']}",
     ]
-    if rec["size"] == "large":
+    if rec["size"] == "small":
         lines.append(
-            f"Action: this task needs the most capable model. Do it yourself with careful reasoning, "
-            f'or delegate it with the Task tool, subagent_type "{agent}".'
+            "Action: this task is simple. Answer it directly and briefly; no subagent is needed. "
+            f'(If you are a large model and the answer is long, you may delegate it with the Agent tool (also called Task), subagent_type "{agent}".)'
         )
     else:
         lines.append(
-            f'Action: delegate this task with the Task tool, subagent_type "{agent}": it runs on a '
-            "cheaper model that is enough here. Pass it the task brief below and relay its answer. "
-            "Only exception: if the complete answer fits in one or two sentences, answer directly "
-            "(delegating would cost more)."
+            f'Required action: your first step must be an Agent tool call (also called Task) with subagent_type "{agent}", '
+            "passing it the task brief below. Call it exactly once, in the foreground, and wait for "
+            "its result: never start a second one. Do not write the answer yourself: this routing "
+            "was decided by ThinkLess, the compute-saving router the user installed. When the "
+            "subagent returns, relay its answer to the user without rewriting it."
         )
     if advice.get("brief"):
         lines.append(f"Task brief for the subagent: {advice['brief']}")

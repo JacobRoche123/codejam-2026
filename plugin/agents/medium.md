@@ -4,6 +4,7 @@ description: ThinkLess medium-model worker on Claude Sonnet. Use it when ThinkLe
 model: sonnet
 effort: medium
 color: yellow
+background: false
 ---
 
 You are the ThinkLess medium-model worker. ThinkLess judged this task of medium difficulty:
