@@ -81,13 +81,13 @@ flowchart LR
 
 ## ThinkLess acts: automatic routing in Claude Code
 
-With the plugin, ThinkLess is no longer an advisor you have to call: it runs on **every prompt** (a `UserPromptSubmit` hook) and Claude **delegates** the work to the subagent ThinkLess picked. Run Claude Code on a cheap lead model (Haiku) and only hard tasks climb to Sonnet or Opus.
+With the plugin, ThinkLess is no longer an advisor you have to call: it runs on **every prompt** (a `UserPromptSubmit` hook) and the session's lead agent, **ThinkLess Router** (on Haiku), **delegates** the work to the subagent ThinkLess picked. Only hard tasks climb to Sonnet or Opus.
 
 ```mermaid
 flowchart TD
     U["You type a request<br/>in Claude Code"] --> H["🪝 ThinkLess hook<br/>(automatic, every prompt)"]
     H -->|"triage · Haiku · ~0.02 ¢"| V{Difficulty}
-    V -- simple --> L["Lead model (Haiku)<br/>answers directly"]
+    V -- simple --> L["Lead agent thinkless:router<br/>(Haiku) answers directly"]
     V -- medium --> M["Subagent thinkless:medium<br/>Sonnet · effort medium"]
     V -- complex --> O["Subagent thinkless:large<br/>Opus · effort high"]
     V -- ambiguous --> Q["Lead asks the user<br/>clarifying questions"]
@@ -102,6 +102,8 @@ flowchart TD
 | "Design the architecture of a ride-sharing app for 50,000 students…" | complex → `thinkless:large` | Haiku $0.005 + Opus $0.204 | $0.210 |
 
 For comparison, Claude Code running on Opus spent $0.11 to $0.13 on a five-bullet summary of the causes of the French Revolution, a task ThinkLess classified as simple in one run and medium in another (the triage is not perfectly consistent). These are single runs, not a benchmark: the [API benchmark](#results) is the controlled measurement.
+
+**Why a dedicated lead agent.** With a plain Haiku session, the advice arrives as a note next to the prompt, and the lead sometimes ignores it: in an interactive test, Haiku received "medium → delegate to thinkless:medium" and wrote the code itself. Running the session as the `thinkless:router` agent puts the routing rule in the lead's **system prompt**, where it carries more weight. With the router, 5 out of 5 runs were routed as advised: 3 medium tasks went to Sonnet ($0.036 to $0.090 each), 1 complex task to Opus, and 1 simple question stayed on Haiku ($0.003).
 
 **Install (Claude Code):**
 
@@ -120,15 +122,15 @@ For comparison, Claude Code running on Opus spent $0.11 to $0.13 on a five-bulle
    claude plugin install thinkless@thinkless
    ```
 
-3. Start Claude Code on a cheap lead model and work as usual:
+3. Start Claude Code with the ThinkLess Router as the lead agent, and work as usual:
 
    ```bash
-   claude --model haiku
+   claude --agent thinkless:router
    ```
 
-Turn the hook off for one session with `THINKLESS_HOOK=off claude`. Slash commands and replies under three words are never triaged.
+Turn the hook off for one session with `THINKLESS_HOOK=off claude`. Slash commands and replies under three words are never triaged. The hook runs in every Claude Code session once the plugin is enabled; to keep it only for the sessions you choose, disable the plugin (`claude plugin disable thinkless@thinkless`) and load it per session with `--plugin-dir`.
 
-**Limits.** Delegation depends on the lead model following the advice: in our runs Haiku did, while an Opus lead, given softer wording, preferred to answer itself. Each subagent call carries Claude Code's own context, so a medium task costs more than in the raw API benchmark. The triage adds about 2 to 3 seconds per prompt.
+**Limits.** Delegation still depends on the lead model following its instructions: reliable with the router in our runs, not with a plain session (see above). The hook only sees the current message, not the conversation, so a short follow-up such as "step 6 problem" can be misjudged. Each subagent call carries Claude Code's own context, so a medium task costs more than in the raw API benchmark. The triage adds about 2 to 3 seconds per prompt.
 
 ## Install ThinkLess as an advisor tool (one command)
 
@@ -383,7 +385,7 @@ flowchart TD
 | [`src/thinkless/server.py`](src/thinkless/server.py) | FastAPI: `/api/ask`, `/api/route`, `/api/benchmark` |
 | [`src/thinkless/mcp_server.py`](src/thinkless/mcp_server.py) | MCP server exposing `choose_model` |
 | [`src/thinkless/hook.py`](src/thinkless/hook.py) | Claude Code hook: triages every prompt and tells Claude which subagent to use |
-| [`plugin/`](plugin/) | Claude Code plugin: the hook, the MCP server and the `small`, `medium`, `large` subagents |
+| [`plugin/`](plugin/) | Claude Code plugin: the hook, the MCP server, the `router` lead agent and the `small`, `medium`, `large` subagents |
 | [`web/`](web/) | Demo page: live trace, benchmark tab, how-it-works |
 | [`bench/`](bench/) | Tasks, benchmark scripts and raw results |
 | [`tests/`](tests/) | 54 offline tests |
