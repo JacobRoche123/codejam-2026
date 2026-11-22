@@ -1,7 +1,7 @@
 "use strict";
 
 const $ = (sel) => document.querySelector(sel);
-const TIER_NAMES = { simple: "Simple", medium: "Medium", complex: "Complex" };
+const TIER_NAMES = { simple: "Simple", medium: "Medium", complex: "Complex", expert: "Expert" };
 
 const state = { request: "", questions: [], config: null };
 
@@ -320,6 +320,6 @@ fetch("/api/config")
   .then((cfg) => {
     state.config = cfg;
     $("#tiers-list").textContent =
-      `Simple → ${cfg.tiers.simple} · Medium → ${cfg.tiers.medium} · Complex → ${cfg.tiers.complex}.`;
+      `Simple → ${cfg.tiers.simple} · Medium → ${cfg.tiers.medium} · Complex → ${cfg.tiers.complex} · Expert (rare) → ${cfg.tiers.expert}.`;
   })
   .catch(() => {});

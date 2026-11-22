@@ -10,6 +10,7 @@
   --simple: #0b7a5c;
   --medium: #a15c00;
   --complex: #6b3fc4;
+  --expert: #c2410c;
   --baseline: #b23a3a;
   --cache: #2f6fd1;
   --danger-soft: #fdecec;
@@ -31,6 +32,7 @@
     --simple: #3cc497;
     --medium: #f0a83a;
     --complex: #a88bf0;
+    --expert: #fb923c;
     --baseline: #f07a7a;
     --cache: #6ea3f5;
     --danger-soft: #3a1d1d;
@@ -142,6 +144,7 @@ button.primary:disabled { opacity: 0.6; cursor: progress; }
 .badge.simple { background: var(--simple); }
 .badge.medium { background: var(--medium); }
 .badge.complex { background: var(--complex); }
+.badge.expert { background: var(--expert); }
 .badge.cache { background: var(--cache); }
 
 .answer { overflow-wrap: anywhere; }
@@ -163,6 +166,7 @@ button.primary:disabled { opacity: 0.6; cursor: progress; }
 .step.execute.simple { border-left-color: var(--simple); }
 .step.execute.medium { border-left-color: var(--medium); }
 .step.execute.complex { border-left-color: var(--complex); }
+.step.execute.expert { border-left-color: var(--expert); }
 .step.baseline { border-left-color: var(--baseline); border-style: dashed; border-left-style: solid; }
 .step.cache, .step.cache_check { border-left-color: var(--cache); }
 .step-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 14px; }

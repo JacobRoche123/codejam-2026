@@ -15,15 +15,17 @@ import os
 import sys
 from typing import Any
 
+from .config import TIERS
 from .llm import LLM, AnthropicLLM
 from .pipeline import Router
 
-# The subagent that runs each size, as defined in plugin/agents/*.md. Claude Code prefixes
-# plugin subagents with the plugin name: agents/small.md becomes "thinkless:small".
+# The subagent that runs each tier, as defined in plugin/agents/*.md. Claude Code prefixes
+# plugin subagents with the plugin name: agents/opus.md becomes "thinkless:opus".
 SUBAGENTS = {
-    "small": ("thinkless:small", "Claude Haiku 5.5, effort low"),
-    "medium": ("thinkless:medium", "Claude Sonnet 5.5, effort medium"),
-    "large": ("thinkless:large", "Claude Opus 5.5, effort high"),
+    "simple": "thinkless:haiku",
+    "medium": "thinkless:sonnet",
+    "complex": "thinkless:opus",
+    "expert": "thinkless:fable",
 }
 
 MIN_WORDS = 3  # "thanks", "ok go", "yes": not worth a triage call
@@ -54,20 +56,22 @@ def format_advice(advice: dict[str, Any]) -> str:
         )
 
     rec = advice["recommendation"]
-    agent, runs_on = SUBAGENTS[rec["size"]]
+    tier = TIERS[rec["tier"]]
+    agent = SUBAGENTS[rec["tier"]]
     lines = [
         header,
-        f"Difficulty: {rec['tier']} → {rec['size']} model ({runs_on}).",
+        f"Model: {tier.display} · effort {tier.effort} (difficulty: {rec['tier']}).",
         f"Reason: {advice['reason']}",
     ]
-    if rec["size"] == "small":
+    if rec["tier"] == "simple":
         lines.append(
-            "Action: this task is simple. Answer it directly and briefly; no subagent is needed. "
-            f'(If you are a large model and the answer is long, you may delegate it with the Agent tool (also called Task), subagent_type "{agent}".)'
+            f"Action: this task is simple enough for {tier.display}. Answer it directly and briefly; "
+            "no subagent is needed. "
+            f'(If you are a larger model and the answer is long, you may delegate it with the Agent tool (also called Task), subagent_type "{agent}".)'
         )
     else:
         lines.append(
-            f'Required action: your first step must be an Agent tool call (also called Task) with subagent_type "{agent}", '
+            f'Required action: use {tier.display}. Your first step must be an Agent tool call (also called Task) with subagent_type "{agent}", '
             "passing it the task brief below. Call it exactly once, in the foreground, and wait for "
             "its result: never start a second one. Do not write the answer yourself: this routing "
             "was decided by ThinkLess, the compute-saving router the user installed. When the "

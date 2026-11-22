@@ -31,7 +31,12 @@ complexity (pick the lowest tier that will still produce an answer as good as th
   of several points, comparisons, plans, emails or letters with specific requirements.
 - "complex": hard reasoning, proofs, non-trivial algorithms, system design with trade-offs,
   subtle debugging, long multi-part deliverables.
-- When torn between two tiers, pick the higher one: a wrong cheap answer wastes the whole call.
+- "expert": rare. Only frontier-level work where a very strong model may still fail: research-level
+  mathematics or novel proofs, inventing a new algorithm with a correctness proof, or a very large
+  deliverable that must stay coherent across many interdependent parts. Textbook proofs, classic
+  algorithms and usual system design are "complex", not "expert". This tier costs twice as much.
+- When torn between simple, medium and complex, pick the higher one: a wrong cheap answer wastes
+  the whole call. This rule does not apply to "expert": choose it only when clearly needed.
 
 reason
 - One short sentence explaining the tier choice, in the user's language.
@@ -47,7 +52,7 @@ TRIAGE_SCHEMA = {
     "properties": {
         "clarity": {"type": "string", "enum": ["clear", "ambiguous"]},
         "questions": {"type": "array", "items": {"type": "string"}},
-        "complexity": {"type": "string", "enum": ["simple", "medium", "complex"]},
+        "complexity": {"type": "string", "enum": ["simple", "medium", "complex", "expert"]},
         "reason": {"type": "string"},
         "brief": {"type": "string"},
     },

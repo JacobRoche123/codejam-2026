@@ -27,9 +27,10 @@ def test_skipped_prompt_costs_nothing():
 @pytest.mark.parametrize(
     ("complexity", "agent", "word"),
     [
-        ("simple", "thinkless:small", "directly"),
-        ("medium", "thinkless:medium", "Required action"),
-        ("complex", "thinkless:large", "Required action"),
+        ("simple", "thinkless:haiku", "directly"),
+        ("medium", "thinkless:sonnet", "Required action"),
+        ("complex", "thinkless:opus", "Required action"),
+        ("expert", "thinkless:fable", "Required action"),
     ],
 )
 def test_advice_names_the_right_subagent(complexity, agent, word):
@@ -37,6 +38,22 @@ def test_advice_names_the_right_subagent(complexity, agent, word):
     assert text.startswith("[ThinkLess advice")
     assert f"\"{agent}\"" in text
     assert word in text
+
+
+@pytest.mark.parametrize(
+    ("complexity", "model_name"),
+    [
+        ("simple", "Claude Haiku 5.5"),
+        ("medium", "Claude Sonnet 5.5"),
+        ("complex", "Claude Opus 5.5"),
+        ("expert", "Claude Fable 5.2"),
+    ],
+)
+def test_advice_names_the_model_not_a_size(complexity, model_name):
+    text = run({"prompt": "Please do this task for me"}, FakeLLM([verdict(complexity=complexity)]))
+    assert f"Model: {model_name}" in text
+    for size_word in ("small model", "medium model", "large model"):
+        assert size_word not in text
 
 
 def test_ambiguous_prompt_asks_questions_first():
@@ -51,7 +68,7 @@ def test_main_prints_advice_for_claude_code(monkeypatch, capsys):
     monkeypatch.setattr(hook, "AnthropicLLM", lambda: FakeLLM([verdict(complexity="medium")]))
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"prompt": "Explain how HTTPS works"})))
     hook.main()
-    assert "\"thinkless:medium\"" in capsys.readouterr().out
+    assert "\"thinkless:sonnet\"" in capsys.readouterr().out
 
 
 def test_main_never_blocks_the_prompt_on_errors(monkeypatch, capsys):

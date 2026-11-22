@@ -136,14 +136,19 @@ def clean_models(models: list[str] | None) -> list[str]:
 def pick_from_list(complexity: str, models: list[str]) -> str:
     """Picks a model from a list ordered smallest → largest.
 
-    simple → first, complex → last, medium → the middle one. With an even count there are
-    two middles: we take the larger one, because a too-small model wastes the whole call.
+    simple → first, expert → last. With up to 3 models: complex → last, medium → the middle
+    one (the larger of two middles, because a too-small model wastes the whole call).
+    With 4 or more, the last model is kept for expert work: complex → second to last,
+    medium → the middle of the others.
     """
+    n = len(models)
     if complexity == "simple":
         return models[0]
-    if complexity == "complex":
+    if complexity == "expert":
         return models[-1]
-    return models[len(models) // 2]
+    if n <= 3:
+        return models[-1] if complexity == "complex" else models[n // 2]
+    return models[-2] if complexity == "complex" else models[(n - 1) // 2]
 
 
 class Router:

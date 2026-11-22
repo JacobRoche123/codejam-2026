@@ -10,8 +10,12 @@ from thinkless.triage import QA, parse_verdict
 def test_cost_matches_published_prices():
     # 1M input + 1M output on Haiku 5.5 = $0.10 + $0.50
     assert cost_usd("claude-haiku-5-5", 1_000_000, 1_000_000) == pytest.approx(0.60)
-    # Cache reads are billed at 10% of the input price.
-    assert cost_usd("claude-opus-5-5", 0, 0, cache_read_tokens=1_000_000) == pytest.approx(0.40)
+    # Published cache-read prices: $0.20 per million on Opus 5.5 and Fable 5.2.
+    assert cost_usd("claude-opus-5-5", 0, 0, cache_read_tokens=1_000_000) == pytest.approx(0.20)
+    # Fable 5.2: $8 input + $40 output per million.
+    assert cost_usd("claude-fable-5-2", 1_000_000, 1_000_000) == pytest.approx(48.0)
+    # Without a published cache price, cache reads cost 10% of the input price.
+    assert cost_usd("claude-haiku-5-5", 0, 0, cache_read_tokens=1_000_000) == pytest.approx(0.01)
 
 
 @pytest.mark.parametrize(
@@ -116,8 +120,13 @@ def test_advisor_mode_recommends_without_answering():
         ("medium", ["s", "m", "l"], "m"),
         ("complex", ["s", "m", "l"], "l"),
         ("medium", ["s", "l"], "l"),            # two middles: prudence picks the larger
-        ("medium", ["a", "b", "c", "d"], "c"),  # same with four models
+        ("expert", ["s", "m", "l"], "l"),       # up to 3 models: expert and complex share the last
         ("complex", ["only"], "only"),          # one model: always that one
+        # With 4+ models the last one is kept for expert work.
+        ("simple", ["a", "b", "c", "d"], "a"),
+        ("medium", ["a", "b", "c", "d"], "b"),
+        ("complex", ["a", "b", "c", "d"], "c"),
+        ("expert", ["a", "b", "c", "d"], "d"),
     ],
 )
 def test_pick_from_list(complexity, models, expected):
